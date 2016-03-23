@@ -3,4 +3,82 @@
 "Is it more secure to run my own on-site data center, or to trust in cloud 
 security?"
 
+From the beginning, users have been concerned about data security in the cloud.
+And up to just a few years ago, nearly everyone believed that on-site data 
+centers were indeed safer.
 
+But we have gone through a sea change. Surveys conducted by business software 
+companies Exacta and Pb7 Research indicated that the number one reason why SMBs
+chose to migrate to the public cloud is for the additional security it provides.
+
+Similarly, the CIO of Capital One, Rob Alexander, put enough trust in cloud 
+security that he announced on Oct 2015 that Capital One was betting on Amazon
+Web Services for its flagship mobile banking application.
+
+In large part, this change is due to cloud companies themselves. CSPs put such a
+high priority on security because they know that without a way to secure their 
+client's data, they would have no business to speak of.
+
+Hence they continued investigating in the latest technology to counter 
+cyber-threats and put relentless effort in securing their systems. You even have instances where companies like apple - which has its own iCloud-are fighting government efforts to create a back door into its own system,knowing such a thing amounts to business suicide.
+
+Ultimately,it's because less of a question of where one keeps their data, but
+what measures they take to secure it from cyber criminals. To that end, here are
+some important ways to continually improve the security of your public cloud.
+
+1. Prioritise Cloud Security in you SLAs
+
+Go over your SLA and make sure that the security guarantees are included and that
+ they can be implemented. Remember that if it’s not clear on the contract, 
+it can’t be enforced.
+
+Typical items to look out for are:
+
+ 1. How will my data be protected? What are the encryption policies?
+ 2. What security standards does the CSP follow? What defenses do they have in 
+place against security risks?
+ 3. What is the Disaster Recovery Plan?
+ 4. How are activities in my cloud monitored and logged?
+ 5. How will the provider handle end-of-business operations and deletion of data?
+
+2. Perform Regular Policy Reviews and Security Audits
+
+The Cloud Usage: Risks and Opportunities Report states that 25.5% of respondents 
+don’t have any form of policies to ensure data security within the cloud. That 
+alone is a cause for concern.
+
+Your organization should take the time to create, regularly review, and update 
+your information security policies. Having regular audits will help determine how closely you and your cloud provider are following your cloud security policies and mitigating threats. Check with your CSP on their policies regarding performing audits, as some may require permission.
+
+If possible, you may also procure the services of third-party auditing services. This ensures objectivity when going over your security processes.
+
+3. Follow an Efficient Monitoring and Logging system
+
+It is critical for your operation to have access to all environment logs, including the creation, deletion, and modification of user accounts and passwords, as well as other important transactions. If something should go wrong, you will have a record of who did what and when—a crucial step for determining loopholes in cloud security.
+
+4. Use Encryption
+
+Encryption lets you secure data going in and out of the public cloud. Cloud providers typically provide their own encryption service to their customers, but if your organization isn’t satisfied with that level of security you may also obtain encryption services from a third party. That way only you and your encryption service have access to the encryption key.
+
+5. Enforce Secure Processes on User Side
+
+Experian’s Data Breach Industry Forecast shows that in 2015, 60% of security breaches were caused by people within the company—that is, the employees themselves.
+
+In order to truly ensure data protection, companies must also control who has access to their data. Your CSP’s security practices also need to be accompanied by user-side protocols and strong authentication.
+
+You may want to include other measures aside from usernames and passwords: physical tokens, key cards,  biometrics, and so on.
+
+6. Use the right security tools and services
+
+Once you have a working knowledge of your CSP’s security capabilities, it would be wise to add to it as you see fit. Refer to the ISO/IEC 27000 series of standards to determine what to look out for.
+
+You can also use tools to increase your cloud security. BitGlass, for example, allows you transparent protection for your computers and mobile devices by tracking and encrypting business data. Skyhigh Networks, on the other hand, can show you what applications your employees are using.
+
+7. Test for Vulnerabilities
+
+Security in the cloud means that you must continually check for weaknesses. This applies every time you build a system, whether or not it’s cloud-based.
+
+Some CSPs provide tools for vulnerability testing. For example, Amazon Inspector actively searches for risks and vulnerabilities in your AWS cloud and provides a detailed report for you.
+
+Much of the cloud requires a shared responsibility. You and your provider must work together to ensure both your company’s and customer’s data are protected at all times. The video below discusses how we should rethink our security in the cloud.
+I
