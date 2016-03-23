@@ -1,0 +1,219 @@
+RHEL 7 Online Storage Management
+
+------------------------------------------------------------------------
+Important Warning
+Online storage reconfiguration must be done carefully. System failures
+or interruptions during the process can lead to unexpected results. Red
+Hat advises that you reduce system load to the maximum extent possible
+during the change operations. This will reduce the chance of I/O errors,
+out-of-memory errors, or similar errors occurring in the midst of a
+configuration change. The following sections provide more specific
+guidelines regarding this.
+
+In addition, Red Hat recommends that you back up all data before
+reconfiguring online storage.
+------------------------------------------------------------------------
+
+13. CONFIGURING ISCSI OFFLOAD AND INTERFACE BINDING
+
+This chapter describes how to set up iSCSI interfaces in order to 
+bind a session to a NIC port when using software iSCSI. It also 
+describes how to set up interfaces for use with network devices 
+that support offloading.
+
+The network subsystem can be configured to determine the path/NIC 
+that iSCSI interfaces should use for binding. For example, if portals 
+and NICs are set up on different subnets, then it is not necessary 
+to manually configure iSCSI interfaces for binding.
+
+Before attempting to configure an iSCSI interface for binding, run 
+the following command first:
+
+$ ping -I ethX target_IP
+
+If ping fails, then you will not be able to bind a session to a 
+NIC. If this is the case, check the network settings first.
+
+13.1. Viewing Available iface Configurations
+
+iSCSI offload and interface binding is supported for the following 
+iSCSI initiator implementations:
+  1. Software iSCSI
+  This stack allocates an iSCSI host instance (that is, scsi_host) 
+  per session, with a single connection per session. As a result, 
+  /sys/class_scsi_host and /proc/scsi will report a scsi_host for 
+  each connection/session you are logged into.
+  
+  2. Offload iSCSI
+  This stack allocates a scsi_host for each PCI device. As such, 
+  each port on a host bus adapter will show up as a different PCI 
+  device, withh a different scsi_host per HBA port.
+  
+To manage both types of initiator implementations, iscsiadm uses 
+the iface structure. With this structure, an iface configuration 
+must be entered in /var/lib/iscsi/ifaces for each HBA port, software 
+iSCSI, or network device (ethX) used to bind sessions.
+
+To view available iface configurations, run iscsiadm -m iface. 
+This will display iface information in the following format:
+
+iface_name transport_name,hardware_address,ip_address,net_ifacename,initiator_name
+
+Refer to the following table for an explanation of each value/setting.
+
+Setting						：		Description
+iface_name				：		iface configuration name.
+transport_name		：		Name of driver
+hardware_address	：		MAC address
+ip_address				：		IP address to use for this port
+net_iface_name		：		Name used for the vlan or alias binding of a software iSCSI session. For iSCSI offloads, net_iface_name will be <empty> because this value is not persistent across reboots.
+initiator_name		：		This setting is used to override a default name for the initiator, which is defined in /etc/iscsi/initiatorname.iscsi
+
+Sample output of the iscsiadm -m iface command
+
+The following is a sample output of the iscsiadm -m iface command:
+
+iface0 qla4xxx,00:c0:dd:08:63:e8,20.15.0.7,default,iqn.2005-06.com.redhat:madmax
+iface1 qla4xxx,00:c0:dd:08:63:ea,20.15.0.9,default,iqn.2005-06.com.redhat:madmax
+
+For software iSCSI, each iface configuration must have a unique 
+name (with less than 65 characters). The iface_name for network 
+devices that support offloading appears in the format 
+
+transport_name.hardware_name.
+
+iscsiadm -m iface output with a Chelsio network card
+
+For example, the sample output of iscsiadm -m iface on a system 
+using a Chelsio network card might appear as:
+
+default tcp,<empty>,<empty>,<empty>,<empty>
+iser iser,<empty>,<empty>,<empty>,<empty>
+cxgb3i.00:07:43:05:97:07 cxgb3i,00:07:43:05:97:07,<empty>,<empty>,<empty>
+
+It is also possible to display the settings of a specific iface 
+configuration in a more friendly way. To do so, use the option 
+-I iface_name. This will display the settings in the following 
+format:
+
+iface.setting = value
+
+sing iface settings with a Chelsio converged network adapter
+
+Using the previous example, the iface settings of the same 
+Chelsio converged network adapter (i.e. 
+iscsiadm -m iface -I cxgb3i.00:07:43:05:97:07) would appear as:
+
+# BEGIN RECORD 2.0-871
+iface.iscsi_ifacename = cxgb3i.00:07:43:05:97:07
+iface.net_ifacename = <empty>
+iface.ipaddress = <empty>
+iface.hwaddress = 00:07:43:05:97:07
+iface.transport_name = cxgb3i
+iface.initiatorname = <empty>
+# END RECORD
+
+13.2 Configuring an iface for Software iSCSI
+
+As mentioned earlier, an iface configuration is required for each 
+network object that will be used to bind a session.
+
+Before
+
+To create an iface configuration for software iSCSI, run the following command:
+
+# iscsiadm -m iface -I iface_name --op=new
+
+This will create a new empty iface configuration with a 
+specified iface_name. If an existing iface configuration already 
+has the same iface_name, then it will be overwritten with a new, 
+empty one.
+
+To configure a specific setting of an iface configuration, use 
+the following command:
+
+# iscsiadm -m iface -I iface_name --op=update -n iface.setting -v hw_address
+
+
+Set MAC address of iface0
+
+For example, to set the MAC address (hardware_address) of iface0 
+to 00:0F:1F:92:6B:BF, run:
+
+# iscsiadm -m iface -I iface0 --op=update -n iface.hwaddress -v 00:0F:1F:92:6B:BF
+
+WARNING
+Do not use default or iser as iface names. Both strings are 
+special values used by iscsiadm for backward compatibility. Any 
+manually-created iface configurations named default or iser will 
+disable backwards compatibility.
+
+13.3 Configuring an iface for iSCSI Offload
+
+By default iscsiadm will create an iface configuration for each 
+port. To view available iface configurations, use the same command 
+for doing so in software iSCSI, i.e. 
+
+iscsiadm -m iface.
+
+Before using the iface of a network card for iSCSI offload, first 
+set the IP address (target_IP) that the device should use. For 
+devices that use the be2iscsi driver, the IP address is configured 
+in the BIOS setup screen. For all other devices, to configure the 
+IP address of the iface use:
+
+# iscsiadm -m iface -I iface_name -o update -n iface.ipaddress -v target_IP
+
+Set the iface IP address of a Chelsio card
+
+For example, to set the iface IP address to 20.15.0.66 when using 
+a card with the iface name of cxgb3i.00:07:43:05:97:07, use:
+
+# iscsiadm -m iface -I cxgb3i.00:07:43:05:97:07 -o update -n iface.ipaddress -v 20.15.0.66
+
+13.4 Binding/Unbinding an iface to a Portal
+
+Whenever iscsiadm is used to scan for interconnects, it will first 
+check the iface.transport settings of each iface configuration in 
+/var/lib/iscsi/ifaces. The iscsiadm utility will then bind discovered 
+portals to any iface whose iface.transport is tcp.
+
+This behavior was implemented for compatibility reasons. To override 
+this, use the "-I iface_name" to specify which portal to bind to an 
+iface, as in:
+
+# iscsiadm -m discovery -t st -p target_IP:port -I iface_name -P 1
+
+By default, the iscsiadm utility will not automatically bind any 
+portals to iface configurations that use offloading. This is because 
+such iface configurations will not have iface.transport set to tcp. 
+As such, the iface configurations need to be manually bound to 
+discovered portals.
+
+It is also possible to prevent a portal from binding to any existing 
+iface. To do so, use default as the iface_name, as in:
+
+# iscsiadm -m discovery -t st -p IP:port -I default -P 1
+
+To remove the binding between a target and iface, use:
+
+# iscsiadm -m node -targetname proper_target_name -I iface0 --op=delete
+
+To delete all bindings for a specific iface, use:
+
+# iscsiadm -m node -I iface_name --op=delete
+
+To delete bindings for a specific portal (e.g. for Equalogic 
+targets), use:
+
+# iscsiadm -m node -p IP:port -I iface_name --op=delete
+
+NOTE
+If there are no iface configurations defined in 
+/var/lib/iscsi/iface and the -I option is not used, iscsiadm will 
+allow the network subsystem to decide which device a specific portal 
+should use.
+
+
+
+

@@ -1,0 +1,23 @@
+{
+    "openstack": {
+      "endpoints": {
+        "network-openvswitch": {
+          "bind_interface": "em3"
+        },
+        "compute-vnc-bind": {
+          "bind_interface": "em3"
+        },
+        "compute-vnc-proxy-bind": {
+          "bind_interface": "em3"
+        }
+      },
+      "network": {
+        "verbose": "False",
+        "debug": "False",
+        "openvswitch": {
+          "bridge_mappings": "default:br-data",
+          "bridge_mapping_interface": "br-data:em4"
+        }
+      }
+   }
+}

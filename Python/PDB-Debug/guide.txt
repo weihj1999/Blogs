@@ -1,0 +1,206 @@
+pdb 常用命令
+
+命令						:		解释
+break 或 b 		:		设置断点	设置断点
+continue 或 c	:		继续执行程序
+list 或 l	    :		查看当前行的代码段
+step 或 s			:		进入函数
+return 或 r		:		执行代码直到从当前函数返回
+exit 或 q			:		中止并退出
+next 或 n			:		执行下一行
+pp						 :	 打印变量的值
+help					 :   帮助
+
+演示：
+
+例子程序　debuger.py
+
+import sys
+def add(num1=0, num2=0):
+    return int(num1) + int(num2)
+def sub(num1=0, num2=0):
+    return int(num1) - int(num2)
+def main():
+    #Assuming our inputs are valid numbers
+    print sys.argv
+    addition = add(sys.argv[1], sys.argv[2])
+    print addition
+    subtraction = sub(sys.argv[1], sys.argv[2])
+    print subtraction
+if __name__ == '__main__':
+    main()
+
+在需要设置断点的地方加入pdb的代码
+import pdb； pdb.set_trace()
+
+更新过的debuger.py
+import pdb
+import sys
+def add(num1=0, num2=0):
+    return int(num1) + int(num2)
+def sub(num1=0, num2=0):
+    return int(num1) - int(num2)
+def main():
+    #Assuming our inputs are valid numbers
+    print sys.argv
+    pdb.set_trace() # <-- Break point added here
+    addition = add(sys.argv[1], sys.argv[2])
+    print addition
+    subtraction = sub(sys.argv[1], sys.argv[2])
+    print subtraction
+if __name__ == '__main__':
+    main()
+
+执行程序后， 程序会在遇到的第一个断点出停止
+
+$ python debuger.py 1 2
+['debuger.py', '1', '2']
+> /cygdrive/d/HongKing/2. Self/MyGithub/Python/PDB-Debug/debuger.py(11)main()
+-> addition = add(sys.argv[1], sys.argv[2])
+(Pdb)
+
+下面测试pdb的指令
+1. 下一行->n
+
+在你的调试器提示中，输入n运行到下一行。
+$ python debuger.py 1 2
+['debuger.py', '1', '2']
+> /cygdrive/d/HongKing/2. Self/MyGithub/Python/PDB-Debug/debuger.py(11)main()
+-> addition = add(sys.argv[1], sys.argv[2])
+(Pdb) n
+> /cygdrive/d/HongKing/2. Self/MyGithub/Python/PDB-Debug/debuger.py(12)main()
+-> print addition
+(Pdb)
+这会执行当前行代码，并准备执行下一行。
+
+我们可以使用n来逐行执行整个程序，但这其实没有什么用处。
+
+2. 打印->p
+
+下面，我们再次开始调试程序。（你可以通过单击c使PDB跳到末尾或者直到下
+一个断点，因为程序中我们并没有其他的断点了，所有程序将会执行完成。）
+
+$ python debuger.py 1 2
+['debuger.py', '1', '2']
+> /cygdrive/d/HongKing/2. Self/MyGithub/Python/PDB-Debug/debuger.py(11)main()
+-> addition = add(sys.argv[1], sys.argv[2])
+(Pdb)
+
+现在，如果我们想知道sys.argv中包含什么内容，我们可以输入以下内容：
+$ python debuger.py 1 2
+['debuger.py', '1', '2']
+> /cygdrive/d/HongKing/2. Self/MyGithub/Python/PDB-Debug/debuger.py(11)main()
+-> addition = add(sys.argv[1], sys.argv[2])
+(Pdb) n
+> /cygdrive/d/HongKing/2. Self/MyGithub/Python/PDB-Debug/debuger.py(12)main()
+-> print addition
+(Pdb) p sys.argv[1]
+'1'
+(Pdb)
+
+使用这种方法可以相当方便地查看变量中实际存储着什么值。现在我们将进入
+加法函数内部。
+3. 单步 -> s
+
+我们可以使用“s”进入加法函数内部。
+(Pdb) s
+3
+> /cygdrive/d/HongKing/2. Self/MyGithub/Python/PDB-Debug/debuger.py(13)main()
+-> subtraction = sub(sys.argv[1], sys.argv[2])
+(Pdb)
+
+这将把我们带入加法函数的内部，现在我们可以在加法函数内部使用n、p和其
+他的操作指令。
+
+此时单击“r”将会把我们带到前面进入函数的返回语句。
+
+如果你想快速跳转到一个函数的结尾处，那么这个指令将很有用。
+
+4. 动态添加断点 b
+前面，在程序运行之前，我们使用pdb.set_trace()设置了一个断点。
+
+不过，经常在调试会话已经开始之后，我们想要在程序中特定的地方添加断点。
+
+这里我们就可以使用选项“b”来实现这种目的。
+
+我们重新开始执行程序。
+$ python debuger.py 1 2
+['debuger.py', '1', '2']
+> /cygdrive/d/HongKing/2. Self/MyGithub/Python/PDB-Debug/debuger.py(11)main()
+-> addition = add(sys.argv[1], sys.argv[2])
+(Pdb) l
+  6         return int(num1) - int(num2)
+  7     def main():
+  8         #Assuming our inputs are valid numbers
+  9         print sys.argv
+ 10         pdb.set_trace() # <-- Break point added here
+ 11  ->     addition = add(sys.argv[1], sys.argv[2])
+ 12         print addition
+ 13         subtraction = sub(sys.argv[1], sys.argv[2])
+ 14         print subtraction
+ 15     if __name__ == '__main__':
+ 16         main()
+
+此时我在第18行设置一个断点。
+
+(Pdb) b 13
+Breakpoint 1 at /cygdrive/d/HongKing/2. Self/MyGithub/Python/PDB-Debug/debuger.py:13
+(Pdb) c
+3
+> /cygdrive/d/HongKing/2. Self/MyGithub/Python/PDB-Debug/debuger.py(13)main()
+-> subtraction = sub(sys.argv[1], sys.argv[2])
+(Pdb)
+从上面我们可以看到，PDB跳到了第13行并等待下一个指令。
+
+5. 列表->l
+
+有时在调试的时候，你可能会忘记此时你处在代码的什么地方。在这种情况下
+，使用“l”将会打印出一个友好的总结，它能够显示出此刻你在代码中的位
+置。
+
+$ python debuger.py 1 2
+['debuger.py', '1', '2']
+> /cygdrive/d/HongKing/2. Self/MyGithub/Python/PDB-Debug/debuger.py(11)main()
+-> addition = add(sys.argv[1], sys.argv[2])
+(Pdb) l
+  6         return int(num1) - int(num2)
+  7     def main():
+  8         #Assuming our inputs are valid numbers
+  9         print sys.argv
+ 10         pdb.set_trace() # <-- Break point added here
+ 11  ->     addition = add(sys.argv[1], sys.argv[2])
+ 12         print addition
+ 13         subtraction = sub(sys.argv[1], sys.argv[2])
+ 14         print subtraction
+ 15     if __name__ == '__main__':
+ 16         main()
+
+6. 动态分配变量
+
+在调试会话期间，你可以分配变量来帮助你进行调试，知道这些对你来说也
+是有帮助的。例如：
+
+$ python debuger.py 1 2
+['debuger.py', '1', '2']
+> /cygdrive/d/HongKing/2. Self/MyGithub/Python/PDB-Debug/debuger.py(11)main()
+-> addition = add(sys.argv[1], sys.argv[2])
+(Pdb) n
+> /cygdrive/d/HongKing/2. Self/MyGithub/Python/PDB-Debug/debuger.py(12)main()
+-> print addition
+(Pdb) p addition
+3
+(Pdb) addition=12
+(Pdb) c
+12
+-1
+
+7.  结束->q
+
+最后，在代码的任何地方如果你想结束调试，可以使用“q”，那么正在执行
+的程序将会终止。
+
+Reference
+
+https://docs.python.org/2/library/pdb.html
+
+

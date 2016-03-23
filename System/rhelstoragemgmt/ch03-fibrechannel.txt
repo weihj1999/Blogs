@@ -1,0 +1,69 @@
+RHEL 7 Online Storage Management
+
+------------------------------------------------------------------------
+Important Warning
+Online storage reconfiguration must be done carefully. System failures 
+or interruptions during the process can lead to unexpected results. Red 
+Hat advises that you reduce system load to the maximum extent possible 
+during the change operations. This will reduce the chance of I/O errors, 
+out-of-memory errors, or similar errors occurring in the midst of a 
+configuration change. The following sections provide more specific 
+guidelines regarding this.
+
+In addition, Red Hat recommends that you back up all data before 
+reconfiguring online storage.
+------------------------------------------------------------------------
+
+3. Fibre Channel
+This section discusses the Fibre Channel API, native rhel7 Fibre Channel 
+drivers, and the Fibre Channel capabilities of these drivers.
+
+3.1 Fibre Channel API
+Below is a list of /sys/class/ directories that contain files used 
+to provide the userspace API. In each item, host numbers are 
+designated by H, bus numbers are B, targets are T, logical unit 
+numbers (LUNs) are L, and remote port numbers are R.
+
+Important
+If your system is using multipath software, Red Hat recommends 
+that you consult your hardware vendor before changing any of the 
+values described in this section.
+
+Transport: /sys/class/fc_transport/targetH:B:T/
+port_id — 24-bit port ID/address
+node_name — 64-bit node name
+port_name — 64-bit port name
+
+Remote Port: /sys/class/fc_remote_ports/rport-H:B-R/
+port_id
+node_name
+port_name
+
+dev_loss_tmo — number of seconds to wait before marking a link 
+as "bad". Once a link is marked bad, I/O running on its 
+corresponding path (along with any new I/O on that path) will be 
+failed.
+
+The default dev_loss_tmo value varies, depending on which driver/device 
+is used. If a Qlogic adapter is used, the default is 35 seconds, 
+while if an Emulex adapter is used, it is 30 seconds. The dev_loss_tmo 
+value can be changed via the scsi_transport_fc module parameter 
+dev_loss_tmo, although the driver can override this timeout value.
+
+The maximum dev_loss_tmo value is 600 seconds. If dev_loss_tmo is 
+set to zero or any value greater than 600, the driver's internal 
+timeouts will be used instead.
+
+fast_io_fail_tmo — length of time to wait before failing I/O 
+executed when a link problem is detected. I/O that reaches the 
+driver will fail. If I/O is in a blocked queue, it will not be failed 
+until dev_loss_tmo expires and the queue is unblocked.
+
+Host: /sys/class/fc_host/hostH/
+port_id
+issue_lip — instructs the driver to rediscover remote ports.
+
+Reference:
+https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Storage_Administration_Guide/ch-fibrechanel.html
+
+

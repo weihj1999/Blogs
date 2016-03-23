@@ -1,0 +1,70 @@
+RHEL 7 Online Storage Management
+
+------------------------------------------------------------------------
+Important Warning
+Online storage reconfiguration must be done carefully. System failures
+or interruptions during the process can lead to unexpected results. Red
+Hat advises that you reduce system load to the maximum extent possible
+during the change operations. This will reduce the chance of I/O errors,
+out-of-memory errors, or similar errors occurring in the midst of a
+configuration change. The following sections provide more specific
+guidelines regarding this.
+
+In addition, Red Hat recommends that you back up all data before
+reconfiguring online storage.
+------------------------------------------------------------------------
+
+12 ISCSI DISCOVERY CONFIGURATION
+
+The default iSCSI configuration file is /etc/iscsi/iscsid.conf. 
+This file contains iSCSI settings used by iscsid and iscsiadm.
+
+During target discovery, the iscsiadm tool uses the settings in 
+/etc/iscsi/iscsid.conf to create two types of records:
+  1. Node records in /var/lib/iscsi/nodes
+  When logging into a target, iscsiadm uses the settings in this 
+  file.
+
+  2. Discovery records in /var/lib/iscsi/discovery_type
+  When performing discovery to the same destination, iscsiadm uses 
+  the settings in this file.
+
+Before using different settings for discovery, delete the current 
+discovery records (i.e. /var/lib/iscsi/discovery_type) first. 
+To do this, use the following command:
+
+# iscsiadm -m discovery -t discovery_type -p target_IP:port -o delete 
+Note:
+The target_IP and port variables refer to the IP address and port 
+combination of a target/portal, respectively.
+Here, discovery_type can be either sendtargets, isns, or fw.
+For details on different types of discovery, refer to the 
+DISCOVERY TYPES section of man iscsiadm.
+There are two ways to reconfigure discovery record settings:
+
+Edit the /etc/iscsi/iscsid.conf file directly prior to performing 
+a discovery. Discovery settings use the prefix discovery; 
+to view them, run:
+
+# iscsiadm -m discovery -t discovery_type -p target_IP:port
+
+Alternatively, iscsiadm can also be used to directly change 
+discovery record settings, as in:
+
+# iscsiadm -m discovery -t discovery_type -p target_IP:port -o update -n setting -v %value
+
+Refer to man iscsiadm for more information on available settings 
+and valid values for each.
+
+After configuring discovery settings, any subsequent attempts to 
+discover new targets will use the new settings. Refer to ch14, 
+“Scanning iSCSI Interconnects” for details on how to scan 
+for new iSCSI targets.
+
+For more information on configuring iSCSI target discovery, refer 
+to the man pages of iscsiadm and iscsid. The /etc/iscsi/iscsid.conf 
+file also contains examples on proper configuration syntax.
+
+
+
+

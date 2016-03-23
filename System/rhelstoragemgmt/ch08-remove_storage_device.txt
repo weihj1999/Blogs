@@ -1,0 +1,90 @@
+RHEL 7 Online Storage Management
+
+------------------------------------------------------------------------
+Important Warning
+Online storage reconfiguration must be done carefully. System failures
+or interruptions during the process can lead to unexpected results. Red
+Hat advises that you reduce system load to the maximum extent possible
+during the change operations. This will reduce the chance of I/O errors,
+out-of-memory errors, or similar errors occurring in the midst of a
+configuration change. The following sections provide more specific
+guidelines regarding this.
+
+In addition, Red Hat recommends that you back up all data before
+reconfiguring online storage.
+------------------------------------------------------------------------
+
+8. Removing A storage device
+Before removing access to the storage device itself, it is advisable 
+to back up data from the device first. Afterwards, flush I/O and 
+remove all operating system references to the device (as described below). 
+If the device uses multipathing, then do this for the multipath 
+"pseudo device" (Section ch7.2, “WWID”) and each of the identifiers 
+that represent a path to the device. If you are only removing a path 
+to a multipath device, and other paths will remain, then the procedure 
+is simpler.
+
+Removal of a storage device is not recommended when the system is 
+under memory pressure, since the I/O flush will add to the load. 
+To determine the level of memory pressure, run the command 
+"vmstat 1 100"; device removal is not recommended if:
+
+  1. Free memory is less than 5% of the total memory in more than 
+  10 samples per 100 (the command free can also be used to display 
+  the total memory).
+  2. Swapping is active (non-zero si and so columns in the vmstat 
+  output).
+  
+The general procedure for removing all access to a device is as 
+follows:
+
+  1. Close all users of the device and backup device data as needed.
+  2. Use umount to unmount any file systems that mounted the device.
+  3. Remove the device from any md and LVM volume using it. If the 
+  device is a member of an LVM Volume group, then it may be necessary 
+  to move data off the device using the pvmove command, then use 
+  the vgreduce command to remove the physical volume, and (optionally) 
+  pvremove to remove the LVM metadata from the disk.
+  4. If the device uses multipathing, run multipath -l and note all 
+  the paths to the device. Afterwards, remove the multipathed device 
+  using "multipath -f device".
+  5. Run "blockdev --flushbufs device" to flush any outstanding I/O 
+  to all paths to the device. This is particularly important for 
+  raw devices, where there is no umount or vgreduce operation to 
+  cause an I/O flush.
+  6. Remove any reference to the device's path-based name, like 
+  /dev/sd, /dev/disk/by-path or the major:minor number, in applications, 
+  scripts, or utilities on the system. This is important in ensuring 
+  that different devices added in the future will not be mistaken for 
+  the current device.
+  7. Finally, remove each path to the device from the SCSI subsystem. 
+  To do so, use the command 
+  echo 1 > /sys/block/device-name/device/delete 
+  where device-name may be sde, for example.
+  Another variation of this operation is 
+  echo 1 > /sys/class/scsi_device/h:c:t:l/device/delete, 
+  where h is the HBA number, c is the channel on the HBA, t is 
+  the SCSI target ID, and l is the LUN.
+NOTE:
+The older form of these commands, 
+echo "scsi remove-single-device 0 0 0 0" > /proc/scsi/scsi, 
+is deprecated.
+
+You can determine the device-name, HBA number, HBA channel, SCSI 
+target ID and LUN for a device from various commands, such as 
+lsscsi, scsi_id, multipath -l, and ls -l /dev/disk/by-*.
+
+After performing Procedure ch9, “Ensuring a Clean Device Removal”, 
+a device can be physically removed safely from a running system. 
+It is not necessary to stop I/O to other devices while doing so.
+
+Other procedures, such as the physical removal of the device, 
+followed by a rescan of the SCSI bus (as described in ch11, 
+“Scanning Storage Interconnects”) to cause the operating system 
+state to be updated to reflect the change, are not recommended. 
+This will cause delays due to I/O timeouts, and devices may be 
+removed unexpectedly. If it is necessary to perform a rescan of 
+an interconnect, it must be done while I/O is paused, as described 
+in ch11, “Scanning Storage Interconnects”.
+
+

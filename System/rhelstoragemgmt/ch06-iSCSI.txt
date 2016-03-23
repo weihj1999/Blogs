@@ -1,0 +1,67 @@
+RHEL 7 Online Storage Management
+
+------------------------------------------------------------------------
+Important Warning
+Online storage reconfiguration must be done carefully. System failures 
+or interruptions during the process can lead to unexpected results. Red 
+Hat advises that you reduce system load to the maximum extent possible 
+during the change operations. This will reduce the chance of I/O errors, 
+out-of-memory errors, or similar errors occurring in the midst of a 
+configuration change. The following sections provide more specific 
+guidelines regarding this.
+
+In addition, Red Hat recommends that you back up all data before 
+reconfiguring online storage.
+------------------------------------------------------------------------
+
+6. ISCSI
+
+This section describes the iSCSI API and the iscsiadm utility. 
+Before using the iscsiadm utility, install the iscsi-initiator-utils 
+package first by running "yum install iscsi-initiator-utils".
+
+In RHEL7, the iSCSI service is lazily started by default. If root 
+is not on an iSCSI device or there are no nodes marked with 
+node.startup = automatic then the iSCSI service will not start 
+until an iscsiadm command is run that requires iscsid or the 
+iscsi kernel modules to be started. For example, running the 
+discovery command "iscsiadm -m discovery -t st -p ip:port" will 
+cause iscsiadmin to start the iSCSI service.
+
+To force the iscsid daemon to run and iSCSI kernel modules to load, 
+run "service iscsid force-start".
+
+6.1 iSCSI API
+To get information about running sessions, run:
+
+# iscsiadm -m session -P 3
+
+This command displays the session/device state, session ID (sid), 
+some negotiated parameters, and the SCSI devices accessible 
+through the session.
+
+For shorter output (for example, to display only the sid-to-node 
+mapping), run:
+
+# iscsiadm -m session -P 0
+
+# iscsiadm -m session
+
+These commands print the list of running sessions with the 
+format:
+
+driver [sid] target_ip:port,target_portal_group_tag proper_target_name
+
+Output of the iscsiadm -m session command:
+
+e.g.
+
+# iscsiadm -m session
+
+tcp [2] 10.15.84.19:3260,2 iqn.1992-08.com.netapp:sn.33615311
+tcp [3] 10.15.85.19:3260,3 iqn.1992-08.com.netapp:sn.33615311
+
+For more information about the iSCSI API, refer to 
+/usr/share/doc/iscsi-initiator-utils-version/README.
+
+

@@ -1,0 +1,54 @@
+RHEL 7 Online Storage Management
+
+------------------------------------------------------------------------
+Important Warning
+Online storage reconfiguration must be done carefully. System failures
+or interruptions during the process can lead to unexpected results. Red
+Hat advises that you reduce system load to the maximum extent possible
+during the change operations. This will reduce the chance of I/O errors,
+out-of-memory errors, or similar errors occurring in the midst of a
+configuration change. The following sections provide more specific
+guidelines regarding this.
+
+In addition, Red Hat recommends that you back up all data before
+reconfiguring online storage.
+------------------------------------------------------------------------
+
+15. LOGGING IN TO AN ISCSI TARGET
+
+As mentioned in ch6, “iSCSI”, the iSCSI service must be running 
+in order to discover or log into targets. To start the iSCSI 
+service, run:
+
+# service iscsi start
+
+When this command is executed, the iSCSI init scripts will 
+automatically log into targets where the node.startup setting 
+is configured as automatic. This is the default value of node.startup 
+for all targets.
+
+To prevent automatic login to a target, set node.startup to manual. 
+To do this, run the following command:
+
+# iscsiadm -m node --targetname proper_target_name -p target_IP:port -o update -n node.startup -v manual
+
+Deleting the entire record will also prevent automatic login. 
+To do this, run:
+
+# iscsiadm -m node --targetname proper_target_name -p target_IP:port -o delete
+
+To automatically mount a file system from an iSCSI device on the 
+network, add a partition entry for the mount in /etc/fstab with the _netdev option. For example, to automatically mount the iSCSI device sdb to /mount/iscsi during startup, add the following line to /etc/fstab:
+
+/dev/sdb /mnt/iscsi ext3 _netdev 0 0
+
+To manually log in to an iSCSI target, use the following command:
+
+# iscsiadm -m node --targetname proper_target_name -p target_IP:port -l
+
+NOTE
+The proper_target_name and target_IP:port refer to the full name 
+and IP address/port combination of a target. For more information, 
+refer to ch6.1, “iSCSI API” and ch14, “Scanning iSCSI Interconnects”.
+
+

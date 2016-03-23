@@ -1,0 +1,56 @@
+RHEL 7 Online Storage Management
+
+------------------------------------------------------------------------
+Important Warning
+Online storage reconfiguration must be done carefully. System failures
+or interruptions during the process can lead to unexpected results. Red
+Hat advises that you reduce system load to the maximum extent possible
+during the change operations. This will reduce the chance of I/O errors,
+out-of-memory errors, or similar errors occurring in the midst of a
+configuration change. The following sections provide more specific
+guidelines regarding this.
+
+In addition, Red Hat recommends that you back up all data before
+reconfiguring online storage.
+------------------------------------------------------------------------
+
+9. REMOVING A PATH TO A STORAGE DEVICE
+
+If you are removing a path to a device that uses multipathing 
+(without affecting other paths to the device), then the general 
+procedure is as follows:
+
+Removing a Path to a Storage Device
+
+  1. Remove any reference to the device's path-based name, like
+  /dev/sd or /dev/disk/by-path or the major:minor number, in 
+  applications, scripts, or utilities on the system. This is 
+  important in ensuring that different devices added in the future 
+  will not be mistaken for the current device.
+  
+  2. Take the path offline using 
+  echo offline > /sys/block/sda/device/state.
+  This will cause any subsequent I/O sent to the device on this 
+  path to be failed immediately. Device-mapper-multipath will 
+  continue to use the remaining paths to the device.
+  3. Remove the path from the SCSI subsystem. To do so, use the 
+  command 
+  echo 1 > /sys/block/device-name/device/delete 
+  where device-name may be sde, for example (as described in 
+  ch9, “Ensuring a Clean Device Removal”).
+
+After performing Procedure ch10, “Removing a Path to a Storage Device”, 
+the path can be safely removed from the running system. It is not 
+necessary to stop I/O while this is done, as device-mapper-multipath 
+will re-route I/O to remaining paths according to the configured 
+path grouping and failover policies.
+
+Other procedures, such as the physical removal of the cable, followed 
+by a rescan of the SCSI bus to cause the operating system state 
+to be updated to reflect the change, are not recommended. This 
+will cause delays due to I/O timeouts, and devices may be removed 
+unexpectedly. If it is necessary to perform a rescan of an interconnect, 
+it must be done while I/O is paused, as described in ch11, “Scanning 
+Storage Interconnects”.
+
+

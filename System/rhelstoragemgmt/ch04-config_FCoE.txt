@@ -1,0 +1,93 @@
+RHEL 7 Online Storage Management
+
+------------------------------------------------------------------------
+Important Warning
+Online storage reconfiguration must be done carefully. System failures 
+or interruptions during the process can lead to unexpected results. Red 
+Hat advises that you reduce system load to the maximum extent possible 
+during the change operations. This will reduce the chance of I/O errors, 
+out-of-memory errors, or similar errors occurring in the midst of a 
+configuration change. The following sections provide more specific 
+guidelines regarding this.
+
+In addition, Red Hat recommends that you back up all data before 
+reconfiguring online storage.
+------------------------------------------------------------------------
+
+4. Configuring a Fibre Channel over Ethernet interface
+
+Setting up and deploying a Fibre Channel over Ethernet (FCoE) 
+interface requires two packages:
+
+  fcoe-utils
+  lldpad
+
+Once these packages are installed, perform the following procedure 
+to enable FCoE over a virtual LAN (VLAN):
+
+Configuring an Ethernet interface to use FCoE
+  1. Configure a new VLAN by copying an existing network script 
+  (e.g. /etc/fcoe/cfg-eth0) to the name of the Ethernet device 
+  that supports FCoE. This will provide you with a default file 
+  to configure. Given that the FCoE device is ethX, run:
+  
+  # cp /etc/fcoe/cfg-eth0  /etc/fcoe/cfg-ethX
+  
+  Modify the contents of cfg-ethX as necessary. Of note, 
+  DCB_REQUIRED should be set to no for networking interfaces that 
+  implement a hardware DCBX client.
+  
+  2. If you want the device to automatically load during boot time, 
+  set ONBOOT=yes in the corresponding /etc/sysconfig/network-scripts/ifcfg-ethX 
+  file. For example, if the FCoE device is eth2, then edit 
+  /etc/sysconfig/network-scripts/ifcfg-eth2 accordingly.
+  
+  3. Start the data center bridging daemon (dcbd) using the following 
+  command:
+  
+  # /etc/init.d/lldpad start
+  
+  4. For networking interfaces that implement a hardware DCBX 
+  client, skip this step and move on to the next.
+  
+  For interfaces that require a software DCBX client, enable data 
+  center bridging on the Ethernet interface using the following 
+  commands:
+  
+  # dcbtool sc ethX dcb on
+  
+  Then, enable FCoE on the Ethernet interface by running:
+  
+  # dcbtool sc ethX app:fcoe e:1
+  
+  Note:
+  These commands will only work if the dcbd settings for the 
+  Ethernet interface were not changed.
+  
+  5. Load the FCoE device now using:
+  
+  # ifconfig ethX up
+  
+  6. Start FCoE using
+  
+  # service fcoe start
+  
+  The FCoE device should appear shortly, assuming all other 
+  settings on the fabric are correct. To view configured FCoE 
+  devices, run:
+  
+  #fcoeadm -i
+  
+After correctly configuring the Ethernet interface to use FCoE, 
+Red Hat recommends that you set FCoE and lldpad to run at startup. 
+To do so, use chkconfig, as in:
+
+# chkconfig lldpad on
+# chkconfig fcoe on
+
+Note:
+Using systemctl stop fcoe.service will stop the daemon but will 
+not deconfigure FCoE interfaces. To do so, a superuser will need 
+to use the "systemctl -s SIGHUP kill fcoe.service" command.
+
+

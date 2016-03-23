@@ -1,0 +1,778 @@
+
+Nginx架构及其web服务搭建优化配置详解
+
+序
+
+Nginx的官方站点Nginx.org
+
+Nginx的版本号，次版本号如是表示偶数一般表示是稳定版，如果是基数一般表示
+是开发版。我们可以根据需要来使用。
+
+Nginx的优势特性：
+
+1.模块化设计，有着很好的扩展性。（想实现什么功能，只需要安装模块就好）
+
+2.高可靠性：因为他是主控进程和worker是同步实现的，一个worker出现问题，
+会立刻启动另一个worker。
+
+3.较低的内存消耗，一万个长连接（keep-alive）,在Nginx仅消耗2.5MB内存。
+
+4.支持热部署 。允许不用停止服务器，而实现更新配置文件，更换日志文件、
+更新服务器程序版本。
+
+ Nginx的基本功能：
+
+1.支持静态资源的web服务器，能缓存打开的文件描述符。
+2.http,smtp,pop3协议的反向代理服务器、缓存、负载均衡；
+3.支持FASTCGI（fpm）
+4.支持模块化，非DSO机制，过滤器（让文本可以实现压缩，节约带宽）,ssl及图像大小调整。
+
+Nginx扩展功能：
+
+  基于名称和ip的虚拟主机
+  定制访问日志
+  支持平滑升级
+  支持KEEPALIVE
+  支持url rewrite
+  支持路径别名
+  支持基于IP和用户名的访问控制。
+  支持传输速率限制，支持并发数限制。
+
+ch1. Nginx的基本工作模式
+一个master进程，生成一个或者多个worker进程。但是这里master是使用root身
+份启动的，因为nginx要工作在80端口。而只有管理员才有权限启动小于低于1023
+的端口。而master主要是负责的作用只是启动worker，加载配置文件，负责系统
+的平滑升级。其它的工作是交给worker。那么当worker被启动之后，也只是负责
+一些web最简单的工作，而其他的工作都是有worker中调用的模块来实现的。另外
+注意的是，这些模块之间是以流水线的方式实现功能的。这里说的流水线，指的是
+一个用户请求，是由多个模块组合各自的功能依次实现完成的。比如：第一个模块
+只负责分析请求首部，第二个模块只负责查找数据，第三个模块只负责压缩数据，
+依次完成各自工作。来实现整个工作的完成。对那么他们是如何实现热部署的呢？
+其实是这样的，我们前面说master不负责具体的工作，而是调用worker工作，他
+只是负责读取配置文件，因此当一个模块修改或者配置文件发生变化，是由master
+进行读取，因此此时不会影响到worker工作。在master进行读取配置文件之后，
+也不会立即的把修改的配置文件告知worker。而是让被修改的worker继续使用老
+的配置文件工作，当worker工作完毕之后，直接当掉这个子进程，更换新的子进
+程，使用新的规则。 
+
+ngnix-arch.jpg
+
+worker主要的工作：
+
+1.接受和处理来自客户端的连接请求，
+
+2.提供反向代理和过滤功能
+
+3.调用模块实现完成其他任务。
+
+ch2.Nginx支持的sendfile机制 
+
+    Sendfile机制是，用户将请求发给内核，内核根据用户的请求调用相应用户
+进程，进程在处理时需要资源。此时再把请求发给内核（进程没有直接IO的能力），
+由内核加载数据。内核查找到数据之后，会把数据复制给用户进程，由用户进程
+对数据进行封装，之后交给内核，内核在进行tcp/ip首部的封装，最后再发给客
+户端。这个功能用户进程只是发生了一个封装报文的过程，却要绕一大圈。因此
+nginx引入了sendfile机制，使得内核在接受到数据之后，不再依靠用户进程给
+予封装，而是自己查找自己封装，这样就减少了一个很长一段时间的浪费，这是
+一个提升性能的核心点。
+
+sendfile.jpg
+
+基于事件驱动：epoll,kqueue,/dev/poll(event ports) 也就是可以异步的IO
+
+消息通知：select,poll,rt signal
+
+ch3. Nginx的编译安装
+
+ 1.编译前准备
+
+编译安装nginx需要事先需要安装开发包组"Development Tools"和 "Development 
+Libraries"。同时，还需要专门安装pcre-devel包|openssl-devel
+# yum -y install pcre-devel
+# yum -y install openssl-devel
+
+2、创建应用于启动Nginx的用户
+
+首先添加用户nginx，实现以之运行nginx服务进程：
+# groupadd -r nginx
+# useradd -r -g nginx nginx
+
+3.下载源码包解压，并且cd到这个包内。接着开始编译和安装：
+# ./configure \
+  --prefix=/usr/local/nginx \
+  --sbin-path=/usr/local/nginx/sbin/nginx \
+  --conf-path=/etc/nginx/nginx.conf \
+  --error-log-path=/var/log/nginx/error.log \
+  --http-log-path=/var/log/nginx/access.log \
+  --pid-path=/var/run/nginx/nginx.pid  \
+  --lock-path=/var/lock/nginx.lock \
+  --user=nginx \
+  --group=nginx \
+  --with-http_ssl_module \
+  --with-http_flv_module \
+  --with-http_stub_status_module \
+  --with-http_gzip_static_module \
+  --http-client-body-temp-path=/var/tmp/nginx/client/ \
+  --http-proxy-temp-path=/var/tmp/nginx/proxy/ \
+  --http-fastcgi-temp-path=/var/tmp/nginx/fcgi/ \
+  --with-pcre
+# make && make install
+
+注意：这个编译过程可能还是会出现错误，要注意查看错误日志。缺少某个开
+发包，就安装对应的包-devel.
+
+
+4.为nginx提供SysV init脚本: 
+  	
+/etc/nginx/nginx.conf
+#!/bin/sh
+#
+# nginx - this script starts and stops the nginx daemon
+#
+# chkconfig:   - 85 15 
+# description:  Nginx is an HTTP(S) server, HTTP(S) reverse \
+#               proxy and IMAP/POP3 proxy server
+# processname: nginx
+# config:      /etc/nginx/nginx.conf
+# config:      /etc/sysconfig/nginx
+# pidfile:     /var/run/nginx.pid
+ 
+# Source function library.
+. /etc/rc.d/init.d/functions
+ 
+# Source networking configuration.
+. /etc/sysconfig/network
+ 
+# Check that networking is up.
+[ "$NETWORKING" = "no" ] && exit 0
+ 
+nginx="/usr/local/nginx/sbin/nginx"
+prog=$(basename $nginx)
+ 
+NGINX_CONF_FILE="/etc/nginx/nginx.conf"
+ 
+[ -f /etc/sysconfig/nginx ] && . /etc/sysconfig/nginx
+ 
+lockfile=/var/lock/subsys/nginx
+ 
+make_dirs() {
+   # make required directories
+   user=`nginx -V 2>&1 | grep "configure arguments:" | sed 's/[^*]*--user=\([^ ]*\).*/\1/g'`
+   options=`$nginx -V 2>&1 | grep 'configure arguments:'`
+   for opt in $options; do
+       if [ `echo $opt | grep '.*-temp-path'` ]; then
+           value=`echo $opt | cut -d "=" -f 2`
+           if [ ! -d "$value" ]; then
+               # echo "creating" $value
+               mkdir -p $value && chown -R $user $value
+           fi
+       fi
+   done
+}
+ 
+start() {
+    [ -x $nginx ] || exit 5
+    [ -f $NGINX_CONF_FILE ] || exit 6
+    make_dirs
+    echo -n $"Starting $prog: "
+    daemon $nginx -c $NGINX_CONF_FILE
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && touch $lockfile
+    return $retval
+}
+ 
+stop() {
+    echo -n $"Stopping $prog: "
+    killproc $prog -QUIT
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && rm -f $lockfile
+    return $retval
+}
+ 
+restart() {
+    configtest || return $?
+    stop
+    sleep 1
+    start
+}
+ 
+reload() {
+    configtest || return $?
+    echo -n $"Reloading $prog: "
+    killproc $nginx -HUP
+    RETVAL=$?
+    echo
+}
+ 
+force_reload() {
+    restart
+}
+ 
+configtest() {
+  $nginx -t -c $NGINX_CONF_FILE
+}
+ 
+rh_status() {
+    status $prog
+}
+ 
+rh_status_q() {
+    rh_status >/dev/null 2>&1
+}
+ 
+case "$1" in
+    start)
+        rh_status_q && exit 0
+        $1
+        ;;
+    stop)
+        rh_status_q || exit 0
+        $1
+        ;;
+    restart|configtest)
+        $1
+        ;;
+    reload)
+        rh_status_q || exit 7
+        $1
+        ;;
+    force-reload)
+        force_reload
+        ;;
+    status)
+        rh_status
+        ;;
+    condrestart|try-restart)
+        rh_status_q || exit 0
+            ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload|force-reload|configtest}"
+        exit 2;;
+esac
+
+ 5.导出需要的文件：
+# cd  /etc/profile.d/
+# vim nginx.sh
+export PATH=/usr/local/nginx/sbin:$PATH
+
+添加man文件
+
+找到源码包里的man文件，把相应的man#,对应的放到/usr/share/man/man#
+
+导出库文件
+
+导出库文件就是在原本的找到源码包的lib文件位置。然后把这个lib的文件路径
+写到/etc/ld.so.conf.d/*.conf的文件中。
+#cd /etc/ld.so.conf.d/
+#vim nginx.conf
+/usr/local/nginx/lib
+
+或者使用下面的方法：
+#echo '/usr/local/nginx/lib' > /etc/ld.so.conf.d/nginx.conf
+#ldconfig
+
+而后为此脚本赋予执行权限：
+  	
+# chmod +x /etc/rc.d/init.d/nginx
+
+添加至服务管理列表，并让其开机自动启动：
+# chkconfig --add nginx
+# chkconfig nginx on
+
+而后就可以启动服务并测试了：
+  	
+# service nginx start
+
+ch4. Nginx的相关配置
+
+Nginx的配置文件位置/我这里编译安装的位置/etc/nginx/nginx.conf
+
+#vim /etc/nginx/nginx.conf
+
+Nginx语法着色插件的配置：
+
+这里打开发现Nginx的配置文件是没有语法着色的。下面我们来安装一个简单的小
+程序，来实现语法着色。
+
+语法着色用到的一个小插件名字叫nginx.vim.
+
+1.下载页面：http://www.vim.org/scripts/script.php?script_id=1886
+
+
+2.下载好后安装nginx.vim 放置于
+
+   /root/.vim/syntax
+
+3.配置nginx.vim
+
+而后在~/.vim/filetype.vim中添加如下行。
+  	
+auBufRead,BufNewFile /etc/nginx/*,/usr/local/nginx/conf/*if&ft=="|setfiletype nginx |" endif
+
+注意：其中/etc/nginx为nginx的配置文件。
+
+再次打开文件nginx.conf，就可以看到语法着色了。
+
+
+Nginx配置文件结构框架：
+    nginx的配置文件段落是可以分为三段
+
+    main配置段
+
+    http配置段 
+
+    mail配置段
+
+一.main配置段
+
+1.开机必备的配置：
+    #user username [groupname]  指定worker的启动用户和属组。
+    #pid /path/to/pidfile       指定pidfile文件
+    #worker_rlimit_nofile # :   指定一个worker进程所能打开的最大文件个数。
+    #worker_rlimit_sigpending:  每个用户能够发往worker的信号的数量。
+
+2.优化性能的配置：                                                   
+    #worker_processes #: 启动的worker线程数。
+    #work_cpu_affinity  cpumask ; 将worker进程绑定在CPU上。使用cpumask表示CPU掩码。
+    #timer_resolusion t： 时间解析度。定义多久更新一次缓存时钟。
+
+3.事件相关的配置：
+    #accept_mutex[on|off]  是否启用worker进程的负载均衡。    
+    #lock_file /path/to/lock_file ;执行负载均衡锁文件的存放位置（就是mutex的锁）。
+    #accept_mutex_delay #ms:   每个worker等待拿到这个锁的等待时长。
+    #use [epoll|rgsig|select|poll] 定义使用的事件模型
+    #work_connetions #:   每个worker进程所能够响应的的最大并发请求数；默认是1024.
+
+4..用于调试、定位问题      
+     #daemon[off|on] 正常的时候开启守护进程模式on。
+     #master_proccess on|off;
+如果是off，表示只开启master，不启动worker。这样处理工作由master直接响
+应。看看问题还 不是出现在master。如果是on，则开启master/worker模式。这
+是由worker响应问题，表示看看问题还不是出现在worker。这样便于逐项查找问
+题。
+
+3.错误日志error_log /path/to/error_log level   可以使用debug级别。但是
+这个选项只有在编译时使用了--with-debug选项才有效。   
+
+二.http配置段
+
+1.指明监听的端口：listen 下面是完整的格式.但是一般需要用到的有：
+
+listenaddress:[port][default_server][ssl]
+
+例如：listen 172.16.100.8:8080
+
+如果IP不给出，表示全部的IP。
+
+default_server  用于别人访问我们的虚拟主机不存在时，来访问我们默认的虚
+拟主机。
+
+lack_log = # ,指明tcp协议的back_log的队列的大小，默认为-1.表示不启用。
+
+ssl 表示监听的端口，必须使用ssl协议。
+
+rcvbuf=size 设定监听的句柄的so_rcvbuf参数。就是接受缓冲大小 
+
+2.server_name name1 name2  […]
+
+    定义主机名，可以使用通配符和正则表达式（~）：当一个客户端发起一个报
+文请求，这是web服务器会把报文中的host，与我们定义的众多server进行匹配。
+如果匹配到了就解析到这个对应的server来执行。
+
+判断流程为下面五步：
+
+    1.先做精确匹配：www.baidu.com
+
+    2.左侧通配符匹配，例如：*.baidu.com   那么mail.baidu.com ,.com都解
+    析于该虚拟主机。
+
+    3.右侧通配符匹配，例如：www.*;         www.baidu.com 被匹配过来了。
+    
+
+    4.正则表达式匹配，例如：~^.*\.baidu\.com$  这里面的点要做转义，所以加了反斜线。
+
+    5.如果都没有匹配到，就是使用listen中的default server。
+
+ 
+
+3.location [=|~*|^~]/urL{…}
+
+    =:表示精确匹配，对于用户的请求URL，对应各location做逐项匹配。如果对
+    应的找到了，则优先做出处理。
+
+		~   :表示正则表达式匹配，区分字符大小写。
+
+		~* :也是正则表达式匹配，但是不区分字符大小写。
+
+		^~   :做URL的前半段匹配，不检查正则表达式。
+
+对于匹配的优先级，首先是精确匹配=这个是等级最高的.其次是字符字面量匹
+配^~ 左侧匹配,  然后是或者 ~,  ~* ，最后对于如果多个location正则表达
+式匹配的到，那么就以第一个被正则表达式匹配到的location作为处理。
+
+4.root设置web资源路径的映射，指明请求的URL所对应的目录的路径。 
+
+5.alias path  别名映射
+
+用于location匹配字段
+    location /images/{     //这个表示请求的images在/web/imags/下面查找images    
+    root “/web/imags”
+    }
+    socation /images/{
+    alias “/web/imags”  //这个表示路径别名。也就是说这里/web/images=/images
+    }
+
+默认主页面：放在http中对所有sever有效
+
+放在server 对所有location有效
+
+放在location只对这个location有效.
+
+6.error_page code[…] [=code]URL | @name  
+
+这里面name表示另一个location 的名字。用另一个location代替这个URL路径。
+
+error_page 404 /404.html  表示如果状态信息404状态码，就去读取404.html
+
+还可以可以自己指定状态码：使用  =code 比如：
+
+除此之外，错误状态码还可以是多个，出现那些状态码就跳转到这个跳转页面。这个跳转页面，然后使用跳转到指定页面。
+    error_page   500 502 503 504  /50x.html;
+    location= /50x.html {
+    root   html;
+     }
+
+三.网络链接相关的配置：
+
+1.keepalive_timeout time ;   保持链接的超时时长，超过这个时间，就断开链接
+
+2.keepalive_requests #;      再一次保持连接上允许承载最大资源请求数；资源超过就断开链接
+
+3.keepalive_disable   [rnsie6][safari][none];      为指定类型的浏览器禁用长链接
+
+4.tcp_nodelay on|off  tcp协议为了节省带宽，通常在对于一些小报文不是直接发送，而是通过将诸多的小报文汇聚成一个大报文，然后打包发送。但是这样往往会增加延迟时间，这个选项我们一般是关闭的。 
+
+5.client_header_timeout time ;读取客户端首部超时时长，主要是针对一些网速比较慢的客户端,如果超过这个不给于响应。
+
+6.client_body_time_out time ;读取客户端请求报文body部分的超时时长。
+
+7.send_timeout time ；发送响应报文的超时时长
+
+其中，keepalive的三个选项是重要的网络配置选项。
+
+ 
+
+四.对内存或者磁盘资源进行分配：
+
+1.clinet_body_in_file_only on|clean|off   用于定于请求报文的部分是否可以暂存于磁盘，形成缓存；on表示允许，并且即使请求结束不删除。
+
+clean表示请求报文的可以暂存磁盘，请求结束被删除。
+
+off关闭这个功能。 这个在编译nginx的时候，有这么一个选项，指专门定义这个功能的。
+
+--http-client-body-temp-path
+
+2.client_body_in_single_buffer on|off
+
+用于定于请求报文的部分是否可以暂存于buffer。其实如果我们的buffer。够大开启这个功能，是可以加速的。
+
+默认是关闭 。
+
+3.client_body_buffer_size SIZE    是否允许服务器暂存的限制大小
+
+4.client_body_temp_path /var/tmp/nginx DIR  [l1][lve2][lve3]…暂存的文件允许暂存的存储位置，可有多级。
+
+5.client_header_buffer_size SIZE;
+
+五.  MIME相关的配置： 
+
+    1.types{}
+
+定义MIME types至文件的扩展名， 如果说是.html就表示是text/html。
+    type {    
+    Text/html .html;
+    Image/jpeg .jpg;
+    }
+
+    2.default_type 
+
+六.文本操作优化的相关配置：
+
+    Sendfile  on|off   是否开启sendfile机制
+
+    aio on|off ;  异步IO 这个一般是要启动
+
+    directio szie|off;是否使用O_DIRECT选项去读取文件；
+
+    open_file _cache max=SIZE | off 缓存最大大小
+
+    open_file_cache_error on|off ;是否缓存在文件中打开时找不到文件路径的，没有权限的。
+
+    open_file_cache_min_users time;每隔多久检查一次缓存中缓存条目的有效性，默认60秒；
+    
+ 七.各功能模块的配置
+
+1.访问控制模块
+
+    基于IP的的控制访问
+
+    可以使用的位置： http,server,location
+
+    使用的指令：allow,deny
+
+    例如：这里放在location的页面进行限制。
+     server {
+    listen8080；
+    server_name www.stu11.com;
+    location /{
+    root"/web/htdocs";
+    }
+    location/IMAGES {
+    alias "/web/htdocs/IMAGES";
+    Allow 172.16.0.0/16;
+    Deny all;
+    }
+
+    基于用户的访问控制 
+    location
+        ~/music {
+        root "/web/htdoc3";
+        auth_basic "close site";
+        auth_basic_user_file
+        /etc/nginx/.htpasswd;
+    }
+
+ 
+
+注意：这里的文件还是用htpasswd的生成的。
+
+这里面的用户密码，也是使用htpasswd生成的：
+
+ 
+
+2.压缩模块
+
+     Gzip  on|off 这是应用在http的。
+
+Gzip on；开启web使用gzip压缩的功能，节约带宽。
+
+Gzip_http_version 1.1；压缩使用的版本  
+
+Gzip_comp_level 7;指定压缩比
+
+Gzip-types ，text/plain….;指定压缩的类型。
+
+Gzip_min_length 1024;意思就是对于大于这个数字的才给压缩。
+
+Gzip_buffers 16 8k 使用多大的缓存来存储gzip的压缩结果。内存是离散分段的，这里表示使用16个8K来缓存。
+
+Gzip_disabled 禁用那种浏览器。
+
+ 
+
+3.定义响应首部：add_header    
+
+可以添加的位置：http，location，server等。
+
+直接添加一个首部 add_header   。注意每一个首部的构成都是由首部的名字和对应的值构成的。
+    location  / {    
+    root "/web/www/html"；
+    Add_header X-header testheader; //首部名和对应的值
+    }
+
+ 
+
+4.定义合法refer引用。(****)
+
+防止盗链使用的模块。Refer_module.
+
+合法引用的使用主要是两个部分的定义：
+
+1.定义那些引用是合法的。
+
+2.对于非法的引用返回值，或者页面。
+    valid_referers none blocked server_names
+        *.example.com example.* www.example.org/galleries/
+        ~\.google\.;
+     if ($invalid_referer) {
+     return 403;
+     }
+
+注意：None 表示为非跨站引用，Block 就表示不以http或者https开头的，因为只要不以http开头的肯定不是绝对路径，server_nmaes定义的网站可以引用。支持正则表达时和字符串通配。
+
+ 
+  	
+<span style="font-size:16px;font-family:'宋体', SimSun;color:rgb(192,0,0);">5.rewrite regex replacement [flag];</span><span style="font-size:16px;font-family:'宋体', SimSun;"><br>    [flag]是一个标志位。<br>    last   的含义：一旦匹配到，对于URL重写。然后对规则从上到下，继续查询。<br>    break  的含义：对于匹配到的请求，给予重写，并且给予客户端直接相应。不在查找，防止循环<br>    Redirect ；表示这是临时重定定向。<br>    例如：<br>   </span><span style="font-size:16px;font-family:'宋体';"> server {<br>    ...<br>    rewrite ^(/download/.*)/media/(.*)\..*$ $1/mp3/$2.mp3 last;<br>    rewrite ^(/download/.*)/audio/(.*)\..*$ $1/mp3/$2.ra  last;<br>    return  403;<br>    ...<br>    }</span><span style="font-size:16px;font-family:'宋体', SimSun;"><br></span>
+
+ 
+
+6.状态页面的定义： 
+
+    location /basic_status {
+        stub_status;
+    }
+
+    下面是状态页面显示信息的含义：
+
+Active connection    当前活动的连接数。
+
+Accepts   已经接受的请求
+
+Requests  总共的请求
+
+Handle    已经处理的连接数
+
+Reading   正在读取的(正在接受请求)
+
+Writing   正在响应报文
+
+Waiting   处于空闲状态等待。
+
+ 7. https 表示是否启用
+
+下面给予https实现的完整演示
+
+ 为CA产生私钥及形成自签证书
+[root@www~]# cd /etc/pki/CA/
+[root@wwwCA]# (umask 077;openssl genrsa -out private/cakey.pem 2048)
+Generating
+RSA private key, 2048 bit long modulus
+............+++
+..............+++
+e
+is 65537 (0x10001)
+#opensslreq -new -x509 -key private/cakey.pem -out cacert.pem
+填写证书信息
+Country
+Name (2 letter code) [XX]:CN
+State
+or Province Name (full name) []:HA
+Locality
+Name (eg, city) [Default City]:ZZ
+Organization
+Name (eg, company) [Default Company Ltd]:stu11
+Organizational
+Unit Name (eg, section) []:ops
+Common
+Name (eg, your name or your server's hostname) []:web.stu11.com
+Email
+Address []:admin@stu11.com
+[root@wwwCA]# echo 01 >serial
+[root@wwwCA]# ls
+cacert.pem  certs crl  index.txt  newcerts private  serial
+
+ 
+[root@wwwCA]# mkdir /etc/nginx/certs
+[root@wwwCA]# cd /etc/nginx/certs
+[root@wwwcerts]# (umask 077; openssl genrsa -out nginx.key 2048)
+Generating
+RSA private key, 2048 bit long modulus
+......................................................+++
+.................................................................+++
+e
+is 65537 (0x10001)
+Country
+Name (2 letter code) [XX]:CN
+State
+or Province Name (full name) []:HA   
+Locality
+Name (eg, city) [Default City]:ZZ
+Organization
+Name (eg, company) [Default Company Ltd]:stu11
+Organizational
+Unit Name (eg, section) []:ops
+Common Name (eg, your name or your server's hostname) []:www.stu11.com
+Email Address []:admin@stu11.com
+ 
+Please
+enter the following 'extra' attributes
+to
+be sent with your certificate request
+A
+challenge password []:
+An
+optional company name []
+[root@wwwcerts]# openssl ca -in nginx.csr -out nginx.crt -days 3650
+Using
+configuration from /etc/pki/tls/openssl.cnf
+Check
+that the request matches the signature
+Signature
+ok
+Certificate
+Details:
+        Serial Number: 1 (0x1)
+        Validity
+            Not Before: Dec 28 02:52:22 2014
+GMT
+            Not After : Dec 25 02:52:22 2024
+GMT
+        Subject:
+            countryName               = CN
+            stateOrProvinceName       = HA
+            organizationName          = stu11
+            organizationalUnitName    = ops
+            commonName                = www.stu11.com
+            emailAddress              = admin@stu11.com
+        X509v3 extensions:
+            X509v3 Basic Constraints:
+                CA:FALSE
+            Netscape Comment:
+                OpenSSL Generated Certificate
+            X509v3 Subject Key Identifier:
+               
+4F:21:A7:F2:6C:AD:6A:5F:4A:EC:2D:F7:F9:F3:7D:4D:B6:17:07:25
+            X509v3 Authority Key Identifier:
+               
+keyid:1D:5B:72:6A:BA:8D:DE:D8:36:AB:F9:26:D0:85:AC:16:E5:4E:7C:DA
+ 
+Certificate
+is to be certified until Dec 25 02:52:22 2024 GMT (3650 days)
+Sign
+the certificate? [y/n]:y
+1
+out of 1 certificate requests certified, commit? [y/n]y
+Write
+out database with 1 new en
+triesData
+Base Updated
+root@wwwcerts]# ls /etc/nginx/certs/
+ nginx.crt  nginx.csr 
+ nginx.key
+[root@www certs]# vim /etc/nginx/nginx.conf
+server
+{
+        listen 443 ssl;
+       
+server_name www.stu11.com;
+        ssl_certificate         /etc/nginx/certs/nginx.crt;
+        ssl_certificate_key     /etc/nginx/certs/nginx.key;
+        ssl_session_cache       shared:SSL:1m;
+        ssl_session_timeout     5m;
+        ssl_ciphers             HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers   on;
+        location / {
+                root /www/vhosts/www.stu11.com;
+                index index.html index.htm;
+                access_log /var/log/nginx/https/error_log;  
+        }
+ }
+
+导出CA证书给客户端：
+
+# sz cacert.pem     //我这里使用本机windows作为客户端
+
+将cacert.pem 后缀改为cacert.crt。然后就能看到证书的样式了。
+
+安装证书
+
+import-ca.jpg
+
+看下导入的证书，确定是CA的。
+
+checkca.jpg
+下面可以使用浏览器查看结果了！！！
+
+

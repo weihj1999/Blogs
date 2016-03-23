@@ -1,0 +1,52 @@
+RHEL 7 Online Storage Management
+
+------------------------------------------------------------------------
+Important Warning
+Online storage reconfiguration must be done carefully. System failures
+or interruptions during the process can lead to unexpected results. Red
+Hat advises that you reduce system load to the maximum extent possible
+during the change operations. This will reduce the chance of I/O errors,
+out-of-memory errors, or similar errors occurring in the midst of a
+configuration change. The following sections provide more specific
+guidelines regarding this.
+
+In addition, Red Hat recommends that you back up all data before
+reconfiguring online storage.
+------------------------------------------------------------------------
+
+17. ADDING/REMOVING A LOGICAL UNIT THROUGH RESCAN-SCSI-BUS.SH
+
+The sg3_utils package provides the rescan-scsi-bus.sh script, 
+which can automatically update the logical unit configuration of 
+the host as needed (after a device has been added to the system). 
+The rescan-scsi-bus.sh script can also perform an issue_lip on 
+supported devices. For more information about how to use this 
+script, refer to rescan-scsi-bus.sh --help.
+
+To install the sg3_utils package, run yum install sg3_utils.
+
+Known Issues With rescan-scsi-bus.sh
+
+When using the rescan-scsi-bus.sh script, take note of the 
+following known issues:
+
+  1. In order for rescan-scsi-bus.sh to work properly, LUN0 must 
+  be the first mapped logical unit. The rescan-scsi-bus.sh can 
+  only detect the first mapped logical unit if it is LUN0. The 
+  rescan-scsi-bus.sh will not be able to scan any other logical 
+  unit unless it detects the first mapped logical unit even if 
+  you use the --nooptscan option.
+  
+  2. A race condition requires that rescan-scsi-bus.sh be run 
+  twice if logical units are mapped for the first time. During 
+  the first scan, rescan-scsi-bus.sh only adds LUN0; all other 
+  logical units are added in the second scan.
+  
+  3. A bug in the rescan-scsi-bus.sh script incorrectly executes 
+  the functionality for recognizing a change in logical unit size 
+  when the --remove option is used.
+  
+  4. The rescan-scsi-bus.sh script does not recognize ISCSI logical
+  unit removals.
+
+

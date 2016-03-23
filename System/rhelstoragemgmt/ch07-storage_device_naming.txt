@@ -1,0 +1,274 @@
+RHEL 7 Online Storage Management
+
+------------------------------------------------------------------------
+Important Warning
+Online storage reconfiguration must be done carefully. System failures 
+or interruptions during the process can lead to unexpected results. Red 
+Hat advises that you reduce system load to the maximum extent possible 
+during the change operations. This will reduce the chance of I/O errors, 
+out-of-memory errors, or similar errors occurring in the midst of a 
+configuration change. The following sections provide more specific 
+guidelines regarding this.
+
+In addition, Red Hat recommends that you back up all data before 
+reconfiguring online storage.
+------------------------------------------------------------------------
+
+7. PERSISTENT NAMING
+
+RHEL provides a number of ways to identify storage devices. It is 
+important to use the correct option to identify each device when 
+used in order to avoid inadvertently accessing the wrong device, 
+particularly when installing to or reformatting drives.
+
+7.1 /dev/sd* and their Major and Minor Numbers
+
+Storage devices managed by the sd driver are identified internally 
+by a collection of major device numbers and their associated 
+minor numbers. The major device numbers used for this purpose are 
+not in a contiguous range. Each storage device is represented by 
+a major number and a range of minor numbers, which are used to 
+identify either the entire device or a partition within the 
+device. There is a direct association between the major and minor 
+numbers allocated to a device and numbers in the form of 
+sd<letter(s)><optional number(s)>. 
+Whenever the sd driver detects a new device, an available major 
+number and minor number range is allocated. Whenever a device is 
+removed from the operating system, the major number and minor 
+number range is freed for later reuse.
+
+The major and minor number range and associated sd names are 
+allocated for each device when it is detected. This means that 
+the association between the major and minor number range and 
+associated sd names can change if the order of device detection 
+changes. Although this is unusual with some hardware configurations 
+(for example, with an internal SCSI controller and disks that 
+have thier SCSI target ID assigned by their physical location 
+within a chassis), it can nevertheless occur. Examples of 
+situations where this can happen are as follows:
+
+  1. A disk may fail to power up or respond to the SCSI controller. 
+  This will result in it not being detected by the normal device 
+  proble. The disk will not be accessible to the system and 
+  subsequent devices will have their major and minor number range, 
+  including the associated sd names shifted down. For example, 
+  should a disk normally referred to as sdb is not detected, a 
+  disk that is normally referred to as sdc would instead appear 
+  as sdb.
+
+  2. A SCSI controller (host bus adapter, or HBA) may fail to 
+  initialize, causing all disks connected to that HBA to not be 
+  detected. Any disks connected to subsequently probed HBAs would 
+  be assigned different major and minor number ranges, and 
+  different associated sd names.
+
+  3. The order of driver initialization could change if different 
+  types of HBAs are present in the system. This would cause the 
+  disks connected to those HBAs to be detected in a different 
+  order. This can also occur if HBAs are moved to different PCI 
+  slots on the system.
+
+  4. Disks connected to the system with Fibre Channel, iSCSI, or 
+  FCoE adapters might be inaccessible at the time the storage 
+  devices are probed, due to a storage array or intervening switch 
+  being powered off, for example. This could occur when a system 
+  reboots after a power failure, if the storage array takes longer 
+  to come online than the system take to boot. Although some 
+  Fibre Channel drivers support a mechanism to specify a persistent 
+  SCSI target ID to WWPN mapping, this will not cause the major 
+  and minor number ranges, and the associated sd names to be reserved, 
+  it will only provide consistent SCSI target ID numbers.
+
+These reasons make it undesireable to use the major and minor 
+number range or the associated sd names when referring to devices, 
+such as in the /etc/fstab file. There is the possibility that the 
+wrong device will be mounted and data corruption could result.
+
+Occassionally, however, it is still necessary to refer to the sd 
+names even when another mechanism is used (such as when errors are 
+reported by a device). This is because the Linux kernel uses sd 
+names (and also SCSI host/channel/target/LUN tuples) in kernel 
+messages regarding the device.
+
+7.2 WWID
+The World Wide Identifier (WWID) can be used in reliably identifying 
+devices. It is a persistent, system-independent ID that the SCSI 
+Standard requires from all SCSI devices. The WWID identifier is 
+guaranteed to be unique for every storage device, and independent 
+of the path that is used to access the device.
+
+This identifier can be obtained by issuing a SCSI Inquiry to 
+retrieve the Device Identification Vital Product Data (page 0x83)
+or Unit Serial Number (page 0x80). The mappings from these WWIDs 
+to the current /dev/sd names can be seen in the symlinks maintained 
+in the /dev/disk/by-id/ directory.
+
+For example, a device with a page 0x83 identifier would have:
+
+scsi-3600508b400105e210000900000490000 -> ../../sda
+
+Or, a device with a page 0x80 identifier would have:
+
+scsi-SSEAGATE_ST373453LW_3HW1RHM6 -> ../../sda
+
+RHEL automatically maintains the proper mapping from the WWID-based 
+device name to a current /dev/sd name on that system. Applications 
+can use the /dev/disk/by-id/ name to reference the data on the disk, 
+even if the path to the device changes, and even when accessing 
+the device from different systems.
+
+If there are multiple paths from a system to a device, device-mapper-multipath 
+uses the WWID to detect this. Device-mapper-multipath then presents 
+a single "pseudo-device" in 
+/dev/mapper/wwid, such as /dev/mapper/3600508b400105df70000e00000ac0000.
+
+The command multipath -l shows the mapping to the non-persistent 
+identifiers: Host:Channel:Target:LUN, /dev/sd name, and the major:minor 
+number.
+
+3600508b400105df70000e00000ac0000 dm-2 vendor,product 
+[size=20G][features=1 queue_if_no_path][hwhandler=0][rw] 
+\_ round-robin 0 [prio=0][active] 
+ \_ 5:0:1:1 sdc 8:32  [active][undef] 
+ \_ 6:0:1:1 sdg 8:96  [active][undef]
+\_ round-robin 0 [prio=0][enabled] 
+ \_ 5:0:0:1 sdb 8:16  [active][undef] 
+ \_ 6:0:0:1 sdf 8:80  [active][undef]
+ 
+Device-mapper-multipath automatically maintains the proper mapping 
+of each WWID-based device name to its corresponding /dev/sd name 
+on the system. These names are persistent across path changes, 
+and they are consistent when accessing the device from different 
+systems.
+
+When the user_friendly_names feature (of device-mapper-multipath) 
+is used, the WWID is mapped to a name of the form 
+/dev/mapper/mpathn. By default, this mapping is maintained in the 
+file /etc/multipath/bindings. These mpathn names are persistent as 
+long as that file is maintained.
+ 
+Important
+If you use user_friendly_names, then additional steps are required 
+to obtain consistent names in a cluster. Refer to the Consistent 
+Multipath Device Names in a Cluster section in the Using DM Multipath 
+Configuration and Administration book.
+
+In addition to these persistent names provided by the system, you 
+can also use udev rules to implement persistent names of your own, 
+mapped to the WWID of the storage.
+
+7.3. Device Names Managed by the udev mechanism (/dev/disk/by-*)
+
+The udev mechanism consists of three major components:
+  1. The kernel
+  Generates events taht are sent to userspace when devices are 
+  added, removed or changed.
+  2. The udevd daemon
+  Receives the events.
+  3. The udev rules
+  Specifies the action to take when the udev daemon receives the 
+  kernel events.
+
+This mechanism is used for all types of devices in Linux, not 
+just for storage devices. In the case of storage devices, RHEL 
+contains udev rules that create symbolic links in the /dev/disk 
+directory allowing storage devices to be referred to by their 
+contents, a unique identifier, their serial number, or the 
+hardware path used to access the device.
+
+/dev/disk/by-label
+  Entries in this directory provide a symbolic name that refers to 
+  the storage device by a label in the contents (that is, the data) 
+  stored on the device. The blkid program is used to read data from 
+  the device and determine a name (that is, a label) for the device. 
+  For example:
+
+  /dev/disk/by-label/Boot
+
+  Note:
+  The information is obtained from the contents (that is, the data) 
+  on the device so if the contents are copied to another device, 
+  the label will remain the same.
+
+  The label can also be used to refer to the device in /etc/fstab 
+  using the following syntax:
+
+  LABEL=Boot
+
+/dev/disk/by-uuid
+  Entries in this directory provide a symbolic name that refers to 
+  the storage device by a unique identifier in the contents (that 
+  is, the data) stored on the device. The blkid program is used to 
+  read data from the device and obtain a unique identifier (that 
+  is, the uuid) for the device. For example:
+
+  UUID=3e6be9de-8139-11d1-9106-a43f08d823a6
+  
+/dev/disk/by-id
+  Entries in this directory provide a symbolic name that refers to 
+  the storage device by a unique identifier (different from all 
+  other storage devices). The identifier is a property of the 
+  device but is not stored in the contents (that is, the data) on 
+  the devices. For example:
+
+  /dev/disk/by-id/scsi-3600508e000000000ce506dc50ab0ad05
+  
+  /dev/disk/by-id/wwn-0x600508e000000000ce506dc50ab0ad05
+  
+  The id is obtained from the world-wide ID of the device, or the 
+  device serial number. The /dev/disk/by-id entries may also 
+  include a partition number. For example:
+  /dev/disk/by-id/scsi-3600508e000000000ce506dc50ab0ad05-part1
+  
+  /dev/disk/by-id/wwn-0x600508e000000000ce506dc50ab0ad05-part1
+
+/dev/disk/by-path
+  Entries in this directory provide a symbolic name that refers to 
+  the storage device by the hardware path used to access the 
+  device, beginning with a reference to the storage controller in 
+  the PCI hierachy, and including the SCSI host, channel, target, 
+  and LUN numbers and, optionally, the partition number. Although 
+  these names are preferable to using major and minor numbers or 
+  sd names, caution must be used to ensure that the target numbers 
+  do not change in a Fibre Channel SAN environment (for example, 
+  through the use of persistent binding) and that the use of the 
+  names is updated if a host adapter is moved to a different PCI 
+  slot. In addition, there is the possibility that the SCSI host 
+  numbers could change if a HBA fails to probe, if drivers are 
+  loaded in a different order, or if a new HBA is installed on the 
+  system. An example of by-path listing is:
+
+  /dev/disk/by-path/pci-0000:03:00.0-scsi-0:1:0:0
+  
+  The /dev/disk/by-path entries may also include a partition number, 
+  such as:
+  
+  /dev/disk/by-path/pci-0000:03:00.0-scsi-0:1:0:0-part1
+
+7.4 Limitations of the udev Device Naming Convention
+
+The following are some limitations of the udev naming convention.
+
+  1. It is possible that the device may not be accessible at the 
+  time the query is performed because the udev mechanism may rely 
+  on the ability to query the storage device when the udev rules 
+  are processed for a udev event. This is more likely to occur 
+  with Fibre Channel, iSCSI or FCoE storage devices when the device 
+  is not located in the server chassis.
+  
+  2. The kernel may also send udev events at any time, causing the 
+  rules to be processed and possibly causing the /dev/disk/by-* 
+  links to be removed if the device is not accessible.
+  
+  3. There can be a delay between when the udev event is generated 
+  and when it is processed (such as when a large number of devices 
+  are detected and the user-space udevd daemon takes some amount 
+  of time to process the rules for each one). This could cause a 
+  delay between when the kernel detects the device and when the 
+  /dev/disk/by-* names are available.
+  
+  4. External programs such as blkid invoked by the rules may 
+  open the device for a brief period of time, making the device 
+  inaccessible for other uses.
+
+

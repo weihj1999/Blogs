@@ -1,0 +1,382 @@
+RHEL 7 Online Storage Management
+
+--------------------------------------------------------------------------
+Important Warning
+Online storage reconfiguration must be done carefully. System failures 
+or interruptions during the process can lead to unexpected results. Red 
+Hat advises that you reduce system load to the maximum extent possible 
+during the change operations. This will reduce the chance of I/O errors, 
+out-of-memory errors, or similar errors occurring in the midst of a 
+configuration change. The following sections provide more specific 
+guidelines regarding this.
+
+In addition, Red Hat recommends that you back up all data before 
+reconfiguring online storage.
+--------------------------------------------------------------------------
+
+1. Target Setup (Server)
+rhel7 use targetcli as a front-view, editing, and saving the configuration
+of Linux-IO target w/o the need to manipulate the kernel target 
+configuration file directly. 
+
+targetcli is a command line interface that allows an administrator to 
+export local storage resoures (backed by either files, volumes, local 
+SCIS devices, or RAM disks) to remote systems.
+
+It has a tree-based layout, includes built-in tab-completion, and 
+provides full auto-complete support and inline documentation.
+
+To ensure that the changes made in targetcli are persistent, start and
+enable the target service.
+
+~]# systemctl start target
+~]# systemctl enable target
+
+Install and run targetcli
+
+# yum install targetcli
+
+start the target service:
+# systemctl start target
+
+Configure the target system start at boot time:
+# systemctl enable target
+
+To start using targetcli, run targetcli and to get a layout of the tree 
+interface, run ls
+
+# targetcli
+:
+/> ls
+o- /........................................[...]
+  o- backstores.............................[...]
+  | o- block.................[Storage Objects: 0]           
+  | o- fileio................[Storage Objects: 0]       
+  | o- pscsi.................[Storage Objects: 0]         
+  | o- ramdisk...............[Storage Ojbects: 0]          
+  o- iscsi...........................[Targets: 0]   
+  o- loopback........................[Targets: 0]
+  
+Nots:
+rhel7 running a targetcli command from bash /, e.g. 
+targetcli iscsi/ create
+
+1.2 Create a Backstore
+Backstores enable support for different methods of storing an exported 
+LUN data on the local machine. Creating a storage object defines the 
+resources the backstore will use.
+
+The backstore devices that LIO supports are:
+
+FILEIO (Linux file-backed storage)
+	FILEIO storage objects can support either write_back or write_thru 
+	operation. The write_back enables the local file system cache. This 
+	improves performance but increases the risk of data loss. It is 
+	recommended to use write_back=false to disable write_back in favor 
+	of write_thru.
+	
+	To create a fileio storage object, run the command:
+	/backstores/fileio create file_name file_location file_size write_back=false
+  e.g.
+  
+  /> /backstores/fileio create file1 /tmp/disk1.img 200M write_back=false
+  Created fileio file1 with size 209715200
+  
+BLOCK (Linux BLOCK devices)
+  The block driver allows the use of any block device that appears in 
+  the /sys/block to be used with LIO. This includes physical devices (for 
+  example, HDDs, SSDs, CDs, DVDs) and logical devices (for example, 
+  software or hardware RAID volumes, or LVM volumes).
+  
+  BLOCK backstores usually provide the best performance.
+  
+  To create a BLOCK backstore using the /dev/sdb block device, use the 
+  following command:
+  
+  /> /backstores/block create name=block_backend dev=/dev/sdb
+  Generating a wwn serial.
+  Created block storage object block_backend using /dev/sdb.
+  
+PSCSI (Linux pass-through SCSI devices)
+  Any storage object that supports direct pass-through of SCSI commands 
+  without SCSI emulation, and with an underlying SCSI device that appears 
+  with lsscsi in /proc/scsi/scsi (such as a SAS hard drive) can be 
+  configured as a backstore. SCSI-3 and higher is supported with this 
+  subsystem.
+  
+  To create a PSCSI backstore for a physical SCSI device, a TYPE_ROM 
+  device using /dev/sr0 in this example, use:
+  
+  /> backstores/pscsi/ create name=pscsi_backend dev=/dev/sr0
+  Generating a wwn serial.
+  Created pscsi storage object pscsi_backend using /dev/sr0
+  
+Memory Copy RAM disk (Linux RAMDISK_MCP)
+  Memory Copy RAM disks (ramdisk) provide RAM disks with full SCSI 
+  emulation and separate memory mappings using memory copy for initiators. 
+  This provides capability for multi-sessions and is particularly useful 
+  for fast, volatile mass storage for production purposes.
+  
+  To create a 1GB RAM disk backstore, use the following command:
+  
+  /> backstores/ramdisk/ create name=rd_backend size=1GB
+  Generating a wwn serial.
+  Created rd_mcp ramdisk rd_backend with size 1GB.
+
+1.3 Create an iSCSI Target
+
+To create an iSCSI target:
+  1. Run targetcli.
+	2. Move into the iSCSI configuration path:
+	/> iscsi/
+	Notes: The cd command is also accepted to change directories, as well 
+	as simply listing the path to move into.
+	3. Create an iSCSI target using a default target name.
+	
+	/iscsi> create 
+  Created target 
+  iqn.2003-01.org.linux-iscsi.hostname.x8664:sn.78b473f296ff
+  Created TPG1
+
+  Or create an iSCSI target using a specified name.
+  
+  /iscsi > create iqn.2006-04.com.example:444
+  Created target iqn.2006-04.com.example:444
+  Created TPG1
+  
+  Verify that the newly created target is visible when targets are 
+  listed with ls.
+  
+  /iscsi > ls
+  o- iscsi.......................................[1 Target]
+      o- iqn.2006-04.com.example:444................[1 TPG] 
+          o- tpg1...........................[enabled, auth]
+              o- acls...............................[0 ACL]
+              o- luns...............................[0 LUN]
+              o- portals.........................[0 Portal]
+            
+  Note: RHEL71 whenever a target is created, a default portal is also 
+  created.
+  
+1.4 Configure an iSCSI Portal
+
+To configure an iSCSI portal, an iSCSI target must first be created and 
+associated with a TPG  
+
+Notes:
+As of Red Hat Enterprise Linux 7.1 when an iSCSI target is created, a 
+default portal is created as well. This portal is set to listen on all 
+IP addresses with the default port number (that is, 0.0.0.0:3260). 
+To remove this and add only specified portals, use 
+/iscsi/iqn-name/tpg1/portals delete ip_address=0.0.0.0 ip_port=3260 
+then create a new portal with the required information.
+
+  1. Move into the TPG.
+  
+  /iscsi> iqn.2006-04.example:444/tpg1/
+  
+  2. There are two ways to create a portal: create a default portal, or 
+  create a portal specifying what IP address to listen to.
+  
+  Creating a default portal uses the default iSCSI port 3260 and allows 
+  the target to listen on all IP addresses on that port.
+  
+  /iscsi/iqn.20...mple:444/tpg1> portals/ create
+  Using default IP port 3260
+  Binding to INADDR_Any (0.0.0.0)
+  Created network portal 0.0.0.0:3260
+
+  To create a portal specifying what IP address to listen to, use the 
+  following command.
+  
+  /iscsi/iqn.20...mple:444/tpg1> portals/ create 192.168.122.137
+  Using default IP port 3260
+  Created network portal 192.168.122.137:3260
+  
+  3. Verify that the newly created portal is visible with the ls command.
+  
+  /iscsi/iqn.20...mple:444/tpg1> ls
+  o- tpg.................................. [enambled, auth]  
+      o- acls ......................................[0 ACL]
+      o- luns ......................................[0 LUN]
+      o- portals ................................[1 Portal]
+          o- 192.168.122.137:3260......................[OK]
+
+1.5 Configure LUNs
+To configure LUNs, first create storage objects.(1.2)
+
+  1. Create LUNs of already created storage objects.
+  
+  /iscsi/iqn.20...mple:444/tpg1> luns/ create /backstores/ramdisk/ramdisk1
+  Created LUN 0.
+
+  /iscsi/iqn.20...mple:444/tpg1> luns/ create /backstores/block/block1
+  Created LUN 1.
+
+  /iscsi/iqn.20...mple:444/tpg1> luns/ create /backstores/fileio/file1
+  Created LUN 2.
+
+	2. show the changes
+	
+	/iscsi/iqn.20...mple:444/tpg1> ls
+  o- tpg.................................. [enambled, auth]
+      o- acls ......................................[0 ACL]
+      o- luns .....................................[3 LUNs]
+      |  o- lun0.........................[ramdisk/ramdisk1]
+      |  o- lun1.................[block/block1 (/dev/vdb1)]
+      |  o- lun2...................[fileio/file1 (/foo.img)]
+      o- portals ................................[1 Portal]
+          o- 192.168.122.137:3260......................[OK]
+  
+  Note:
+  Be aware that the default LUN name starts at 0, as opposed to 1 as was 
+  the case when using tgtd in Red Hat Enterprise Linux 6.
+  
+  Important:
+  By default, LUNs are created with read-write permissions. In the event 
+  that a new LUN is added after ACLs have been created that LUN will be 
+  automatically mapped to all available ACLs. This can cause a security 
+  risk. Use the following procedure to create a LUN as read-only.
+  
+  Create a read-only LUN
+  1. To create a LUN with read-only permissions, first use the following 
+  command:
+  /> set global auto_add_mapped_luns=false
+  Parameter auto_add_mapped_luns is now 'false'.
+
+	This prevents the auto mapping of LUNs to existing ACLs allowing the 
+	manual mapping of LUNs.
+	
+	2. Next, manually create the LUN with the command 
+	iscsi/target_iqn_name/tpg1/acls/initiator_iqn_name/ create 
+	mapped_lun=next_sequential_LUN_number tpg_lun_or_backstore=backstore 
+	write_protect=1
+	
+	/> iscsi/iqn.2015-06.com.redhat:target/tpg1/acls/iqn.2015-06.com.redhat:initiator/ 
+	create mapped_lun=1 tpg_lun_or_backstore=/backstores/block/block2 write_protect=1
+  Created LUN 1.
+  Created Mapped LUN 1.
+  /> ls
+  o- / ...................................................... [...]
+    o- backstores ........................................... [...]
+    <snip>
+    o- iscsi ......................................... [Targets: 1]
+    | o- iqn.2015-06.com.redhat:target .................. [TPGs: 1]
+    |   o- tpg1 ............................ [no-gen-acls, no-auth]
+    |     o- acls ....................................... [ACLs: 2]
+    |     | o- iqn.2015-06.com.redhat:initiator .. [Mapped LUNs: 2]
+    |     | | o- mapped_lun0 .............. [lun0 block/disk1 (rw)]
+    |     | | o- mapped_lun1 .............. [lun1 block/disk2 (ro)]
+    |     o- luns ....................................... [LUNs: 2]
+    |     | o- lun0 ...................... [block/disk1 (/dev/vdb)]
+    |     | o- lun1 ...................... [block/disk2 (/dev/vdc)]
+    <snip>
+  
+	The mapped_lun1 line now has (ro) at the end (unlike mapped_lun0's (rw)) 
+	stating that it is read-only.
+
+1.6 Configure ACLs
+Create an ACL for each initiator that will be connecting. This enforces 
+authentication when that initiator connects, allowing only LUNs to be 
+exposed to each initiator. Usually each initator has exclusive access to 
+a LUN. Both targets and initiators have unique identifying names. The 
+initiator's unique name must be known to configure ACLs. For open-iscsi 
+initiators, this can be found in /etc/iscsi/initiatorname.iscsi.
+
+  1. Move into the acls directory.
+  
+  /iscsi/iqn.20...mple:444/tpg1> acls/
+  
+  2. Create an ACL. Either use the initiator name found in 
+  /etc/iscsi/initiatorname.iscsi on the initiator, or if using a name 
+  that is easier to remember, 
+  
+  /iscsi/iqn.20...444/tpg1/acls> create iqn.2006-04.com.example.foo:888
+  Created Node ACL for iqn.2006-04.com.example.foo:888
+  Created mapped LUN 2.
+  Created mapped LUN 1.
+  Created mapped LUN 0.
+  
+  The above example's behavior depends on the setting used. In this case, 
+  the global setting auto_add_mapped_luns is used. This automatically 
+  maps LUNs to any created ACL.
+  
+  3. Show the changes
+  /iscsi/iqn.20...444/tpg1/acls> ls
+  o- acls .................................................[1 ACL]
+      o- iqn.2006-04.com.example.foo:888 ....[3 Mapped LUNs, auth]
+          o- mapped_lun0 .............[lun0 ramdisk/ramdisk1 (rw)]
+          o- mapped_lun1 .................[lun1 block/block1 (rw)]
+          o- mapped_lun2 .................[lun2 fileio/file1 (rw)]
+  
+1.7 Fibre Channel over Ethernet(FCoE) Target Setup
+
+In addition to mounting LUNs over FCoE, exporting LUNs to other machines 
+over FCoE is also supported with the aid of targetcli.
+
+Important:
+Before proceeding, we need refer to "Configuring a Fibre Channel over 
+Ethernet Interface", and verify that basic FCoE setup is complete. and that
+fcoeadm -i display configured FCoE interfaces.
+
+Configure FCoE target
+  1. Setting up an FCoE target requires the installation of the targetcli 
+  package, along with its dependencies, refer 1.1
+  
+  2. Create an FCoE target instance on an FCoE interface.
+  
+  /> tcm_fc/ create 00:11:22:33:44:55:66:77
+  
+  If FCoE interfaces are present on the system, tab-completing after 
+  create will list available interfaces. If not, ensure "fcoeadm -i" 
+  shows active interfaces.
+  
+  3. Map a backstore to the target instance.
+  /> tcm_fc/00:11:22:33:44:55:66:77
+  /> luns/ create /backstores/fileio/example2
+  
+  4. Allow access to the LUN from an FCoE initiator.
+  
+  /> acls/ create 00:99:88:77:66:55:44:33
+  
+  The LUN should now be accessible to that initiator.
+  
+  5. To make the changes persistant across reboots, use the saveconfig 
+  command and type yes when prompted. If this is not done the configuration 
+  will be lost after rebooting.
+  
+  6. Exit targetcli by typing exit or entering ctrl+D.
+  
+1.8 Remove objects with targetcli
+
+To remove an backstore use the command:
+
+/> /backstores/backstore-type/backstore-name
+
+To remove parts of an iSCSI target, such as an ACL, use the following 
+command:
+
+/> /iscsi/iqn-name/tpg/acls/ delete iqn-name
+
+To remove the entire target, including all ACLs, LUNs, and portals, 
+use the following command:
+
+/> /iscsi delete iqn-name
+
+1.9 targetcli References:
+
+man targetcli
+
+wiki:  http://linux-iscsi.org/wiki/Targetcli
+screencast: https://www.youtube.com/watch?v=BkBGTBadOO8
+
+
+  
+  
+
+  
+
+
+  
+  
+

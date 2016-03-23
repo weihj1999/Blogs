@@ -1,0 +1,41 @@
+Python代码运行助手
+
+Python代码运行助手可以让你在线输入Python代码，然后通过本机运行的一个Python脚本来执行代码。原理如下：
+
+    在网页输入代码：
+
+def normalize(name):
+    return name.capitalize()
+
+测试
+L1 = ['adam', 'LISA', 'bar']
+L2 = list(map(normalize, L1))
+print(L2)
+
+
+
+    点击Run按钮，代码被发送到本机正在运行的Python代码运行助手；
+
+    Python代码运行助手将代码保存为临时文件，然后调用Python解释器执行代码；
+
+    网页显示代码执行结果：
+
+助手文件为 learning.py
+
+运行
+在存放learning.py的目录下运行命令：
+
+C:\Users\michael\Downloads> python learning.py
+
+如果看到Ready for Python code on port 39093...表示运行成功，不要关闭命令行窗口，最小化放到后台运行即可：
+试试效果
+
+需要支持HTML5的浏览器：
+
+    IE >= 9
+    Firefox
+    Chrome
+    Sarafi
+
+
+

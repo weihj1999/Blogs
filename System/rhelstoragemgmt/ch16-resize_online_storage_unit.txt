@@ -1,0 +1,228 @@
+RHEL 7 Online Storage Management
+
+------------------------------------------------------------------------
+Important Warning
+Online storage reconfiguration must be done carefully. System failures
+or interruptions during the process can lead to unexpected results. Red
+Hat advises that you reduce system load to the maximum extent possible
+during the change operations. This will reduce the chance of I/O errors,
+out-of-memory errors, or similar errors occurring in the midst of a
+configuration change. The following sections provide more specific
+guidelines regarding this.
+
+In addition, Red Hat recommends that you back up all data before
+reconfiguring online storage.
+------------------------------------------------------------------------
+
+16. RESIZING AN ONLINE LOGICAL UNIT
+
+In most cases, fully resizing an online logical unit involves two 
+things: resizing the logical unit itself and reflecting the size 
+change in the corresponding multipath device (if multipathing is 
+enabled on the system).
+
+To resize the online logical unit, start by modifying the logical 
+unit size through the array management interface of your storage 
+device. This procedure differs with each array; as such, consult 
+your storage array vendor documentation for more information on 
+this.
+
+NOTE
+In order to resize an online file system, the file system must 
+not reside on a partitioned device.
+
+16.1. Resizing Fibre Channel Logical Units
+
+After modifying the online logical unit size, re-scan the logical 
+unit to ensure that the system detects the updated size. To do 
+this for Fibre Channel logical units, use the following command:
+
+$ echo 1 > /sys/block/sdX/device/rescan
+
+IMPORTANT
+To re-scan Fibre Channel logical units on a system that uses 
+multipathing, execute the aforementioned command for each sd 
+device (i.e. sd1, sd2, and so on) that represents a path for the 
+multipathed logical unit. To determine which devices are paths 
+for a multipath logical unit, use multipath -ll; then, find the 
+entry that matches the logical unit being resized. It is advisable 
+that you refer to the WWID of each entry to make it easier to 
+find which one matches the logical unit being resized.
+
+16.2. Resizing an iSCSI Logical Unit
+
+After modifying the online logical unit size, re-scan the logical 
+unit to ensure that the system detects the updated size. To do 
+this for iSCSI devices, use the following command:
+
+# iscsiadm -m node --targetname target_name -R
+
+
+Replace target_name with the name of the target where the device 
+is located.
+NOTE
+You can also re-scan iSCSI logical units using the following command:
+
+# iscsiadm -m node -R -I interface
+
+Replace interface with the corresponding interface name of the 
+resized logical unit (for example, iface0). This command performs 
+two operations:
+
+It scans for new devices in the same way that the command 
+echo "- - -" > /sys/class/scsi_host/host/scan does 
+
+(refer to Section ch14, “Scanning iSCSI Interconnects”).
+
+It re-scans for new/modified logical units the same way that the 
+command 
+
+echo 1 > /sys/block/sdX/device/rescan 
+
+does. Note that this command is the same one used for re-scanning 
+Fibre Channel logical units.
+
+16.3. Updating the Size of Your Multipath Device
+
+If multipathing is enabled on your system, you will also need to 
+reflect the change in logical unit size to the logical unit's 
+corresponding multipath device (after resizing the logical unit). 
+This can be done through multipathd. To do so, first ensure that 
+multipathd is running using service multipathd status. Once you've 
+verified that multipathd is operational, run the following command:
+
+# multipathd -k"resize map multipath_device"
+
+The multipath_device variable is the corresponding multipath entry 
+of your device in /dev/mapper. Depending on how multipathing is 
+set up on your system, multipath_device can be either of two 
+formats:
+  1. mpathX, 
+  where X is the corresponding entry of your device 
+  (for example, mpath0)
+  2. a WWID; for example, 3600508b400105e210000900000490000
+
+To determine which multipath entry corresponds to your resized 
+logical unit, run multipath -ll. This displays a list of all 
+existing multipath entries in the system, along with the major and minor numbers of their corresponding devices.
+
+IMPORTANT
+Do not use multipathd -k"resize map multipath_device" if there 
+are any commands queued to multipath_device. That is, do not use 
+this command when the no_path_retry parameter (in 
+/etc/multipath.conf) is set to "queue", and there are no active 
+paths to the device.
+
+For more information about multipathing, refer to the RHEL 7 
+DM Multipath guide.
+
+16.4. Changing the Read/Write State of an Online Logical Unit
+
+Certain storage devices provide the user with the ability to 
+change the state of the device from Read/Write (R/W) to Read-Only 
+(RO), and from RO to R/W. This is typically done through a 
+management interface on the storage device. The operating system 
+will not automatically update its view of the state of the device 
+when a change is made. Follow the procedures described in this 
+chapter to make the operating system aware of the change.
+
+Run the following command, replacing XYZ with the desired device 
+designator, to determine the operating system's current view of 
+the R/W state of a device:
+
+# blockdev --getro /dev/sdXYZ
+
+The following command is also available for RHEL7:
+# cat /sys/block/sdXYZ/ro 1 = read-only 0 = read-write
+
+When using multipath, refer to the ro or rw field in the second 
+line of output from the multipath -ll command. For example:
+
+36001438005deb4710000500000640000 dm-8 GZ,GZ500
+[size=20G][features=0][hwhandler=0][ro]
+\_ round-robin 0 [prio=200][active]
+ \_ 6:0:4:1  sdax 67:16  [active][ready]
+ \_ 6:0:5:1  sday 67:32  [active][ready]
+\_ round-robin 0 [prio=40][enabled]
+ \_ 6:0:6:1  sdaz 67:48  [active][ready]
+ \_ 6:0:7:1  sdba 67:64  [active][ready]
+
+To change the R/W state, use the following procedure:
+
+Procedure Change the R/W state
+
+  1. To move the device from RO to R/W, see step 2.
+  To move the device from R/W to RO, ensure no further writes will 
+  be issued. Do this by stopping the application, or through the 
+  use of an appropriate, application-specific action.
+  
+  Ensure that all outstanding write I/Os are complete with the 
+  following command:
+  
+  # blockdev --flushbufs /dev/device
+  
+  Replace device with the desired designator; for a device mapper 
+  multipath, this is the entry for your device in dev/mapper. For 
+  example, /dev/mapper/mpath3.
+
+  2. Use the management interface of the storage device to change 
+  the state of the logical unit from R/W to RO, or from RO to R/W. 
+  The procedure for this differs with each array. Consult applicable 
+  storage array vendor documentation for more information.
+
+  3. Perform a re-scan of the device to update the operating 
+  system's view of the R/W state of the device. If using a device 
+  mapper multipath, perform this re-scan for each path to the 
+  device before issuing the command telling multipath to reload 
+  its device maps.
+
+	This process is explained in further detail in ch16.4.1, 
+	“Rescanning logical units”.
+
+16.4.1. Rescanning logical units
+
+After modifying the online logical unit Read/Write state, as 
+described in ch16.4, “Changing the Read/Write State of an Online 
+Logical Unit”, re-scan the logical unit to ensure the system 
+detects the updated state with the following command:
+
+# echo 1 > /sys/block/sdX/device/rescan
+
+To re-scan logical units on a system that uses multipathing, 
+execute the above command for each sd device that represents a 
+path for the multipathed logical unit. For example, run the 
+command on sd1, sd2 and all other sd devices. To determine which 
+devices are paths for a multipath unit, use multipath -11, then 
+find the entry that matches the logical unit to be changed.
+
+Use of the multipath -11 command
+
+For example, the multipath -11 above shows the path for the LUN 
+with WWID 36001438005deb4710000500000640000. In this case, enter:
+
+# echo 1 > /sys/block/sdax/device/rescan
+# echo 1 > /sys/block/sday/device/rescan
+# echo 1 > /sys/block/sdaz/device/rescan
+# echo 1 > /sys/block/sdba/device/rescan
+
+16.4.2. Updating the R/W state of a multipath device
+
+If multipathing is enabled, after rescanning the logical unit, 
+the change in its state will need to be reflected in the logical 
+unit's corresponding multipath drive. Do this by reloading the 
+multipath device maps with the following command:
+
+# multipath -r
+
+The multipath -11 command can then be used to confirm the change.
+
+16.4.3. Documentation
+
+Further information can be found in the Red Hat Knowledgebase. To 
+access this, navigate to 
+https://www.redhat.com/wapps/sso/login.html?redirect=https://access.redhat.com/knowledge/ 
+and log in. Then access the article at 
+https://access.redhat.com/kb/docs/DOC-32850.
+
+
+

@@ -1,0 +1,42 @@
+$ whereis ss
+
+ss: /usr/sbin/ss /usr/share/man/man8/ss.8.gz
+
+
+
+$ rpm -qf /usr/sbin/ss
+
+iproute-2.6.32-23.el6.x86_64
+
+
+$ time ss  -tan|awk 'NR>1{++S[$1]}END{for (a in S) print a,S[a]}'
+
+SYN-RECV 1
+
+ESTAB 4687
+
+TIME-WAIT 20250
+
+LISTEN 39
+
+real0m0.238s
+
+user0m0.192s
+
+sys0m0.083s
+
+
+$ ss  -tan|awk 'NR>1{++S[$1]}END{for (a in S) print a,S[a]}'
+
+[TCP_ESTABLISHED] = "ESTAB",
+[TCP_SYN_SENT] = "SYN-SENT",
+[TCP_SYN_RECV] = "SYN-RECV",
+[TCP_FIN_WAIT1] = "FIN-WAIT-1",
+[TCP_FIN_WAIT2] = "FIN-WAIT-2",
+[TCP_TIME_WAIT] = "TIME-WAIT",
+[TCP_CLOSE] = "UNCONN",
+[TCP_CLOSE_WAIT] = "CLOSE-WAIT",
+[TCP_LAST_ACK] = "LAST-ACK",
+[TCP_LISTEN] =  "LISTEN",
+[TCP_CLOSING] = "CLOSING",
+

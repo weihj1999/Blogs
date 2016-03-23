@@ -1,0 +1,54 @@
+RHEL 7 Online Storage Management
+
+------------------------------------------------------------------------
+Important Warning
+Online storage reconfiguration must be done carefully. System failures 
+or interruptions during the process can lead to unexpected results. Red 
+Hat advises that you reduce system load to the maximum extent possible 
+during the change operations. This will reduce the chance of I/O errors, 
+out-of-memory errors, or similar errors occurring in the midst of a 
+configuration change. The following sections provide more specific 
+guidelines regarding this.
+
+In addition, Red Hat recommends that you back up all data before 
+reconfiguring online storage.
+------------------------------------------------------------------------
+
+2. Create an iSCSI initiator
+
+After creating a target with targetcli as in Ch1“Target Setup” use the 
+iscsiadm utility to set up an initiator.
+
+Note:
+  In RHEL7, the iSCSI service is lazily started by default. That is, 
+  should an iscsiadm command be issued the service will start.
+  
+Create an iSCSI initiator
+
+1. Install iscsi-initiator-utils
+# yum install iscsi-initiator-utils
+
+2. If a custom name was given to the aCL in CH1.6,  then thcnage the 
+/etc/iscsi/initiatorname.isci file to match
+
+#vim /etc/iscsi/initiatorname.iscsi
+#cat /etc/iscsi/initiatorname.iscsi
+InitiatorName=iqn.2006-04.com.example.foo
+
+3. Discover the target
+# iscsiadm -m discovery -t st -p target-ip-address
+10.64.24.179:3260,1 iqn.2006-04.com.example:3260
+
+4. Log in to the target with the target iqn name found in the 
+above step.
+
+#iscsiadm -m node -T iqn.2006-04.com.example:3260 -l
+Logging in to [iface: default, target: iqn.2006-04.com.example:3260, portal: 
+10.64.24.179,3260] (multiple)
+Login to [iface: default, target: iqn.2006-04.com.example:3260, portal: 
+10.64.24.179,3260] successful.
+
+This procedure can be followed for any number of initators 
+connected to the same LUN so long as their specific initiator 
+names are added to the ACL as described in ch1.6
+

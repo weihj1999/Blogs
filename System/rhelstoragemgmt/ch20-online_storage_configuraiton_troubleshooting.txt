@@ -1,0 +1,67 @@
+RHEL 7 Online Storage Management
+
+------------------------------------------------------------------------
+Important Warning
+Online storage reconfiguration must be done carefully. System failures
+or interruptions during the process can lead to unexpected results. Red
+Hat advises that you reduce system load to the maximum extent possible
+during the change operations. This will reduce the chance of I/O errors,
+out-of-memory errors, or similar errors occurring in the midst of a
+configuration change. The following sections provide more specific
+guidelines regarding this.
+
+In addition, Red Hat recommends that you back up all data before
+reconfiguring online storage.
+------------------------------------------------------------------------
+
+20. 20. ONLINE STORAGE CONFIGURATION TROUBLESHOOTING
+
+This section provides solution to common problems users experience 
+during online storage reconfiguration.
+
+Logical unit removal status is not reflected on the host.
+
+  When a logical unit is deleted on a configured filer, the change 
+  is not reflected on the host. In such cases, lvm commands will 
+  hang indefinitely when dm-multipath is used, as the logical unit 
+  has now become stale.
+  
+  To work around this, perform the following procedure:
+  
+  Working Around Stale Logical Units
+
+  1. Determine which mpath link entries in /etc/lvm/cache/.cache 
+  are specific to the stale logical unit. To do this, run the 
+  following command:
+
+  $ ls -l /dev/mpath | grep stale-logical-unit
+
+  example: Determine specific mpath link entries
+
+For example, if stale-logical-unit is 3600d0230003414f30000203a7bc41a00, 
+the following results may appear:
+
+lrwxrwxrwx 1 root root 7 Aug  2 10:33 /3600d0230003414f30000203a7bc41a00 -> ../dm-4
+lrwxrwxrwx 1 root root 7 Aug  2 10:33 /3600d0230003414f30000203a7bc41a00p1 -> ../dm-5
+
+This means that 3600d0230003414f30000203a7bc41a00 is mapped to 
+two mpath links: dm-4 and dm-5.
+
+Next, open /etc/lvm/cache/.cache. Delete all lines containing 
+stale-logical-unit and the mpath links that stale-logical-unit 
+maps to.
+
+  example: Delete relevant lines
+
+  Using the same example in the previous step, the lines you need 
+  to delete are:
+/dev/dm-4 
+/dev/dm-5 
+/dev/mapper/3600d0230003414f30000203a7bc41a00
+/dev/mapper/3600d0230003414f30000203a7bc41a00p1
+/dev/mpath/3600d0230003414f30000203a7bc41a00
+/dev/mpath/3600d0230003414f30000203a7bc41a00p1
+
+
+
+

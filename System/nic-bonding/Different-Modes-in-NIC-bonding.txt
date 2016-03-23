@@ -1,0 +1,20 @@
+Create the Bond file(bonding.conf)
+
+# vi /etc/modprobe.d/bonding.conf
+
+alias bond0 bonding
+options bond0 mode=1 miimon=100
+
+Different Modes used in bonding.conf file .
+
+balance-rr or 0 — round-robin mode for fault tolerance and load balancing.
+active-backup or 1 — Sets active-backup mode for fault tolerance.
+balance-xor or 2 — Sets an XOR (exclusive-or) mode for fault tolerance and load balancing.
+broadcast or 3 — Sets a broadcast mode for fault tolerance. All transmissions are sent on all slave interfaces.
+802.3ad or 4 — Sets an IEEE 802.3ad dynamic link aggregation mode. Creates aggregation groups that share the same speed & duplex settings.
+balance-tlb or 5 — Sets a Transmit Load Balancing (TLB) mode for fault tolerance & load balancing.
+balance-alb or 6 — Sets an Active Load Balancing (ALB) mode for fault tolerance & load balancing.
+
+Notes:
+
+we also set mode in the nic script files if we don't set a new bonding.conf under /etc/modprobe.d/

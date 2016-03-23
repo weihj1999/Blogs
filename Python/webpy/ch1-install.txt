@@ -1,0 +1,286 @@
+
+如果作为产品服务器,推荐下述安装
+
+Web服务器
+webpy有一个内部的web服务器,但是只能用作部署用途. 为了部署,另外需要一个
+robust服务器,下述的一种
+  1. lighttpd(BSD),通过flup's fastcgi(BSD) (easy_install flup)
+   lighttpd:  http://trac.lighttpd.net/trac/wiki/#ReferenceDocumentation
+   
+  2. Apache(Apache)通过(mod_wsgi)
+
+数据库
+
+webpy不需要数据库,不过它支持一下数据库
+
+  1. postgresql [BSD] (doc) with psycopg2 [BSD] (doc) as the python 
+  client. (easy_install psycopg2)
+  postgresql: http://www.postgresql.org/docs/
+  psycopg2: http://www.initd.org/tracker/psycopg/wiki/PsycopgTwo
+  
+  2. mysql [GPL] (doc) with MySQLdb [CNRI] (doc) as the python client 
+  (easy_install MySQL-python)
+  mysql: http://www.mysql.org/doc/
+  MySQLdb: http://mysql-python.sourceforge.net/MySQLdb.html
+  
+  3. sqlite [Public domain] (doc) with pysqlite as python client 
+  (easy_install pysqlite).
+  sqlite: http://www.sqlite.org/docs.html
+Connection Pooling
+
+针对高流量的站点, 连接池允许webpy保持多数据库连接开放, 典型的允许快速访问
+数据库, 这是可选的,但是作为扩展策略使用
+  1. DBUtils [CNRI] (doc) (easy_install DBUtils)
+  DBUtils: http://www.webwareforpython.org/DBUtils/Docs/UsersGuide.html
+  
+模板(Templates)
+
+webpy有自己的模板系统, 允许用户让为授信的用户使用这个编辑模板,在template中
+使用类似python的语言
+  1. template.py [built-in] (doc)
+  template.py: http://webpy.org/docs/0.3/templetor
+  
+  
+用户输入(User Input)
+Markdown允许webpy用户写文本， 来个到转化的HTML文件来显示， 这个并不是必要
+的，但是我们推荐通过用户输入产生格式化的HTML
+
+  1. python-markdown [BSD] (doc)
+  http://www.freewisdom.org/projects/python-markdown/
+  
+以上是推荐的安装的组合配置。下面继续webpy的安装
+
+安装方法
+  1. 下载安装
+  http://webpy.org/static/web.py-0.37.tar.gz 或者获取github上最新的安
+  装 https://github.com/webpy/webpy/tarball/master 
+  解压缩后执行
+  #python setup.py install
+
+  2. easyinstall
+  easy_install web.py
+
+  3. PIP 
+  pip install web.py
+
+部署
+
+webpy带有一个内置的WEB服务器， 可以参考教程来编写一个应用， 依据编写的应用
+code.py来启动web 服务器
+#python code.py
+也可以指定特定的IP或者端口
+python code.py 1234
+
+生产（Production）
+当我们运行一个webpy的程序后， web服务器就开始运行了， 但是对于流行的大多数站点，我们
+希望事情能运行得更严肃点， webpy实现了WSGI，运行的所有东西都是和它使兼容的。 WSGI是在
+web服务器和应用之间的一个通用的API，类似于Java的Servlet Interface（analogous ）。和
+CGI， FastCGI或者SCGI一起运行webpy，我们需要安装flup（http://www.saddi.com/software/flup/dist/）
+它为哪些API提供了WSGI接口。
+
+对所有的CGI变， 需要在code.py中添加：
+#!/usr/bin/env python
+
+并且修改它的可执行权限
+
+chmod +x code.py
+
+LightTPD
+
+和FastCGI一起使用
+
+FastCGI和lighttpd是webpy在生产环境中推荐使用的方法。 http://reddit.com/使用这个办法
+处理了大量的访问，
+
+lighttpd配置看起来像下面这样：
+
+ server.modules = ("mod_fastcgi", "mod_rewrite")
+ server.document-root = "/path/to/root/"     
+ fastcgi.server = ( "/code.py" =>     
+ (( "socket" => "/tmp/fastcgi.socket",
+    "bin-path" => "/path/to/root/code.py",
+    "max-procs" => 1
+ ))
+ )
+
+ url.rewrite-once = (
+   "^/favicon.ico$" => "/static/favicon.ico",
+   "^/static/(.*)$" => "/static/$1",
+   "^/(.*)$" => "/code.py/$1"
+ )
+ 
+lighttpd的一个版本， 比较重要的是要保证 fastcgi.server接口的“check-local”属性设置
+为false， 特别是代码code.py位于文档主目录外部。 
+
+如果有的到一些关于不能导入flup的错误信息， 使用命令行安装它，easy_install flup
+
+从版本145开始， 在fastcgi的配置中设置一个bin-environmen变量，是很有必要的，尤其是代码
+中包含了重定向（redirects）。如果你的代重定向到http://domain.com/ 并且在url栏你看到了
+http://domain.com/code.py/， 你就需要设置环境变量了， 这会很自然的带来fastcgi.server
+配置发生变化，看起来像下面的样子：
+fastcgi.server = ( "/code.py" =>
+((
+   "socket" => "/tmp/fastcgi.socket",
+   "bin-path" => "/path/to/root/code.py",
+   "max-procs" => 1,
+   "bin-environment" => (
+     "REAL_SCRIPT_NAME" => ""
+   ),
+   "check-local" => "disable"
+))
+)
+
+
+Apache
+和CGI
+添加下面的东西到httpd.conf或者aparch2.conf
+Alias /foo/static/ /path/to/static
+ScriptAlias /foo/ /path/to/code.py
+
+和CGI一起使用.htaccess
+CGI很容易配置，但是对于高性能站点不太合适。 添加如下到.htaccess:
+
+
+Options +ExecCGI
+AddHandler cgi-script .py
+
+然后把浏览器指向http://example.com/code.py/， 不要忘记结尾的斜线（trailing slash），
+否则，你会看到一个 not found的消息， 这是因为我们定义的urls列表不能匹配任何东西。为
+了保证在没有进入code.py的时候工作正常， 需要启用mod_rewrite规则， 如下
+
+注意： 
+webpy实施后把cgitb模块搞坏了，因为它抓取stdout，需要使用下面的方法绕过去
+import cgitb; cgitb.enable()
+import sys
+
+# ... import web etc here...
+
+def cgidebugerror():
+    """
+    """        
+    _wrappedstdout = sys.stdout
+
+    sys.stdout = web._oldstdout
+    cgitb.handler()
+
+    sys.stdout = _wrappedstdout
+
+web.internalerror = cgidebugerror
+
+
+和FastCGI
+FastCGI很容易配置
+添加下面的到 .htaccess
+
+<Files code.py>      
+SetHandler fastcgi-script
+</Files>
+
+很不幸， 不想lighttpd， Apache没有给出任何提示， 它希望你的webpy脚本作为一个FastCGI
+服务器，所以我们明白无误地（explicitly）需要告诉webpy。 添加下面的代码到code.py的
+if __name__ == "__main__"的前面
+
+web.wsgi.runwsgi = lambda func, addr=None: web.wsgi.runfcgi(func, addr)
+
+接着把你的浏览器指向http://example.com/code.py/， 不要忘记结尾的斜线，否则，同样可以
+看到not found的错误， 为了保证在没有进入code.py的时候工作正常， 需要启用mod_rewrite
+规则， 如下
+
+和SCGI
+
+https://www.mems-exchange.org/software/scgi/ 
+下载mod_scgi源 http://www.mems-exchange.org/software/files/mod_scgi/ 
+
+windows的apache用户编辑httpd.conf
+LoadModule scgi_module Modules/mod_scgi.so
+SCGIMount / 127.0.0.1:8080
+
+重新启动apache，然后启动code.py:
+
+python code.py 127.0.0.1:8080 scgi
+
+之后通过浏览器访问，一切OK
+
+和mod_python
+mod_python的表现和FastCGI差不多， 但是配置上不是那么直接（straight-forward）
+
+对于Python 2.5
+
+cd /usr/lib/python2.5/wsgiref
+# or in windows: cd /python2.5/lib/wsgiref
+wget -O modpython_gateway.py http://svn.aminus.net/misc/modpython_gateway.py
+# or fetch the file from that address using your browser
+
+对于 Python<2.5
+
+cd /usr/lib/python2.4/site-packages
+# or in windows: cd /python2.4/lib/site-packages
+svn co svn://svn.eby-sarna.com/svnroot/wsgiref/wsgiref
+cd wsgiref
+wget -O modpython_gateway.py http://svn.aminus.net/misc/modpython_gateway.py
+# or fetch the file from that address using your browser  
+
+把code.py改名，比如说codep.py,添加
+
+app = web.application(urls, globals())
+main = app.wsgifunc()
+
+在.htaccess中添加
+AddHandler python-program .py
+PythonHandler wsgiref.modpython_gateway::handler
+PythonOption wsgi.application codep::main
+
+可能你想要添加RewriteRule来指向/到/codep.py/
+
+确保使用额外的/来访问/codep.py/， 否则会看到如下错误信息
+A server error occurred. Please contact the administrator.
+
+和mod_wsgi
+
+mod_wsgi是一个新的apache模块， 比较典型的和mod_python差不多的来支持WSGI的应用，配置
+比较简单，
+添加下面的代码到code.py
+
+app = web.application(urls, globals(), autoreload=False)
+application = app.wsgifunc()
+
+在Apache的URL的hierarchy中， mod_wsgi提供了很多可能的方法来开放给WSGI应用，但是一个
+简单的方法可以做，通过添加下面的东西到.htaccess
+
+<Files code.py>
+    SetHandler wsgi-script
+    Options ExecCGI FollowSymLinks
+</Files>
+
+如果你在apache的error日志中得到了错："ImportError: No module named web"， ， 可以
+试着在导入web之前配置code.py的绝对路径
+import sys, os
+abspath = os.path.dirname(__file__)
+sys.path.append(abspath)
+os.chdir(abspath)
+import web
+
+并且，你可能需要阅读下WSGI的常见问题：
+Common problems with WSGI application 
+（http://code.google.com/p/modwsgi/wiki/ApplicationIssues）
+
+现在访问http://example.com/code.py/，应该是可以了
+
+补充：Apache中的mod_write规则
+如果你想webpy在'http://example.com' 可访问，而不是在'http://example.com/code.py/'可
+访问，添加下面的规则到.htaccess文件
+<IfModule mod_rewrite.c>      
+  RewriteEngine on
+  RewriteBase /
+  RewriteCond %{REQUEST_URI} !^/icons
+  RewriteCond %{REQUEST_URI} !^/favicon.ico$
+  RewriteCond %{REQUEST_URI} !^(/.*)+code.py/
+  RewriteRule ^(.*)$ code.py/$1 [PT]
+</IfModule>
+
+如果code.py在myaap/的子目录，调整RewriteBase 到RewriteBase /myapp/
+如果我们有静态CSS文件和图片需要传送，为每一个允许访问的路径复制带icon的行，
+
+
+
+

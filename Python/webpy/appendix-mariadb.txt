@@ -1,0 +1,40 @@
+
+安装：
+
+RedHat Enterprise Linux 7开始，系统盘中自带的数据库为MariaDB，安装的步骤如下：
+
+ 
+
+1. 挂载安装盘镜像：mount /dev/cdrom /mnt
+
+2. 创建yum源：cat > /etc/yum.repos.d/d.repo << EOF
+
+                         [d]
+
+                         baseurl=file:///mnt
+
+                         EOF
+
+3.导入key：yum --import /mnt/RPM-GPG-KEY-redhat-release
+
+4. 安装：yum -y install mariadb-server mariadb
+
+5. 完成安装，启动服务：systemctl start mariadb.service
+
+6. 设置自启动：systemctl enable mariadb.service
+
+7. 访问mariadb：mysql -u root -p            密码为空
+
+8.  查看数据库：show databases;
+
+9. 安装完毕，卸载光驱：umount /mnt
+
+10. 删除yum源：rm -f /etc/yum.repos.d/d/repo
+
+
+另外如果需要最新版可以查看在线yum源 
+http://yum.mariadb.org/10.0/
+
+
+
+

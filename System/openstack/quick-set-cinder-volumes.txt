@@ -1,0 +1,7 @@
+dd a file as block device
+dd if=/dev/zero of=cinder-volumes bs=1 count=0 seek=1024G
+losetup /dev/loop2 /var/lib/cinder/cinder-volumes
+pvcreate /dev/loop2
+vgcreate cinder-volumes /dev/loop2
+
+
