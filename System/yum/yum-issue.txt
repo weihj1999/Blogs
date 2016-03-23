@@ -1,5 +1,0 @@
-1. issue: error: cannot open Packages database in /var/lib/rpm E: could not open RPM database
-
-resolve:
-rm -rf /var/lib/rpm/__db*
-

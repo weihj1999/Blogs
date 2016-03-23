@@ -1,7 +1,0 @@
-TYPE=Ethernet
-BOOTPROTO=none
-DEVICE=enp0s3
-ONBOOT=yes
-HWADDR="08:00:27:69:60:c9"
-MASTER=bond0
-SLAVE=yes
