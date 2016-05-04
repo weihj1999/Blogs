@@ -24,52 +24,67 @@
 
 反复研读你的SLA，确认包含了安全承诺，记住如果在合同中不清楚，它就不能被执行
 看起来需要确认的几个典型条目包含：
+a. 我的数据是如何被保护的？加密策略是什么？
+b. CSP会遵循什么样的安全标准？他们针对安全风险有什么样的安全防护？
+c. 灾难恢复计划是什么？（DRP）
+d. 我的云服务器活动是如何被监控和记录的？
+e. 服务商如何处理服务到期的操作以及数据的删除？
 
- 1. How will my data be protected? What are the encryption policies?
- 2. What security standards does the CSP follow? What defenses do they have in 
-place against security risks?
- 3. What is the Disaster Recovery Plan?
- 4. How are activities in my cloud monitored and logged?
- 5. How will the provider handle end-of-business operations and deletion of data?
+2. 执行定期的策略检查和安全审计
 
-2. Perform Regular Policy Reviews and Security Audits
+云的使用情况，风险和使用机会统计。 大部分负责人没有任何形式的策略来确保在云中
+的数据安全，这是一个值得关心的很大的漏洞。
 
-The Cloud Usage: Risks and Opportunities Report states that 25.5% of respondents 
-don’t have any form of policies to ensure data security within the cloud. That 
-alone is a cause for concern.
+你的公司应该花时间去创建一个定期的复检，更新你的安全策略信息。 进行定期的审计会
+帮助你和你的云服务商紧密执行云安全策略和潜在的威胁。和CSP针对他们的安全执行和审
+计，可能需要额外的权限
 
-Your organization should take the time to create, regularly review, and update 
-your information security policies. Having regular audits will help determine how closely you and your cloud provider are following your cloud security policies and mitigating threats. Check with your CSP on their policies regarding performing audits, as some may require permission.
+如果可能，你也可以要求第三方的安全审计服务， 这会确保你的安全流程目标清晰。
 
-If possible, you may also procure the services of third-party auditing services. This ensures objectivity when going over your security processes.
+3. 遵从有效的监控和日志系统
 
-3. Follow an Efficient Monitoring and Logging system
+你对于你能访问的所有环境的日志，是非常关键的，包括用户帐号密码的创建，删除，修改
+，与其他系统的交互，同样非常重要。如果任何地方出了错误， 你就有一份记录，什么人
+做了什么，什么时候一个关键操作步骤决定了云安全的漏洞。
 
-It is critical for your operation to have access to all environment logs, including the creation, deletion, and modification of user accounts and passwords, as well as other important transactions. If something should go wrong, you will have a record of who did what and when—a crucial step for determining loopholes in cloud security.
+4. 使用加密
+加密可以使你保证进出于公有云的数据更安全，云服务商通畅给它们的客户提供自己的加密服务，但是如果你的公司对于他们提供的安全级别不满意，，你也可以从第三方那里获取加密服务。这种情况下，你和你的加密服务商才有权限拥有加密钥匙。
 
-4. Use Encryption
+5. 在用户方面加强安全流程
 
-Encryption lets you secure data going in and out of the public cloud. Cloud providers typically provide their own encryption service to their customers, but if your organization isn’t satisfied with that level of security you may also obtain encryption services from a third party. That way only you and your encryption service have access to the encryption key.
+一些调研表明，60%的安全问题是有公司内部的人的操作导致的，员工自身。 为了确保数据
+真正得到保护，公司必须控制什么人访问什么样的数据。 你的CSP安全实践也需要在使用的
+用户中得到执行，比如用户的安全协议，和很强的授权机制。
 
-5. Enforce Secure Processes on User Side
+你也可能需要在用户名和密码之外包含其他的安全措施，比如说，物理令牌，安全卡，生物
+识别等等。
 
-Experian’s Data Breach Industry Forecast shows that in 2015, 60% of security breaches were caused by people within the company—that is, the employees themselves.
+6. 使用正确的安全工具和服务
 
-In order to truly ensure data protection, companies must also control who has access to their data. Your CSP’s security practices also need to be accompanied by user-side protocols and strong authentication.
+如果你有和你的CSP的安全能力的工作经验和知识，那就用起来吧。 参考TSO／IEC 27000
+的系列标准。 
+你也可以使用工具来增强云的安全性，举例来说 BitGlass，允许你通过追踪和加密商务数
+据来保护你的计算机和移动设备. SkyHigh 网络，另一方面，可以显示出来你的员工都使用
+了哪些应用。
 
-You may want to include other measures aside from usernames and passwords: physical tokens, key cards,  biometrics, and so on.
+7. 测试漏洞
+云的安全异味者你必须持续检查弱点，在每次你穿件一套系统的时候都要做这样的事情，其
+实无论它在不在云上
+一些CSP提供了弱点攻击测试的工具，比如说，Amzaon Inspector可以搜索风险和弱点，并
+生成报告给你。
 
-6. Use the right security tools and services
+一些云需要共享责任，你和你的服务商必须在一起工作来确保你的公司和客户的数据得到保
+保护，持续思考云的安全想就更重要的了
 
-Once you have a working knowledge of your CSP’s security capabilities, it would be wise to add to it as you see fit. Refer to the ISO/IEC 27000 series of standards to determine what to look out for.
 
-You can also use tools to increase your cloud security. BitGlass, for example, allows you transparent protection for your computers and mobile devices by tracking and encrypting business data. Skyhigh Networks, on the other hand, can show you what applications your employees are using.
 
-7. Test for Vulnerabilities
 
-Security in the cloud means that you must continually check for weaknesses. This applies every time you build a system, whether or not it’s cloud-based.
 
-Some CSPs provide tools for vulnerability testing. For example, Amazon Inspector actively searches for risks and vulnerabilities in your AWS cloud and provides a detailed report for you.
 
-Much of the cloud requires a shared responsibility. You and your provider must work together to ensure both your company’s and customer’s data are protected at all times. The video below discusses how we should rethink our security in the cloud.
-I
+
+
+
+
+
+
+
