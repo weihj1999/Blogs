@@ -1,38 +1,29 @@
 7 Ways to Improve Public Cloud Security
 
-"Is it more secure to run my own on-site data center, or to trust in cloud 
-security?"
+"在你自己负责的数据中心上运行的应用是否安全？或者说是否可以信任云的安全性?"
 
-From the beginning, users have been concerned about data security in the cloud.
-And up to just a few years ago, nearly everyone believed that on-site data 
-centers were indeed safer.
+最初，用户都会非常注重云中的数据安全性,仅仅几年之前，每个人都非常相信在数据中心
+里面的应用确实更加安全, 但是我们尽力了一些变化，由商业软件公司Exacta和Pb7发起
+的调研表明，其中一个促使SBMs选择迁移到公有云的一个原因是因为它提供的安全性。
 
-But we have gone through a sea change. Surveys conducted by business software 
-companies Exacta and Pb7 Research indicated that the number one reason why SMBs
-chose to migrate to the public cloud is for the additional security it provides.
+非常类似的，Capital One的CIO， Rob Alexander，对云的安全性基于了很高的期望，他宣
+布，Capital One押宝于Amazon Web Service，为他的移动银行应用提供的服务。
 
-Similarly, the CIO of Capital One, Rob Alexander, put enough trust in cloud 
-security that he announced on Oct 2015 that Capital One was betting on Amazon
-Web Services for its flagship mobile banking application.
+在很大程度上，这种变化在于云服务商自身， CSPs投入了很大的精力和重视到云的安全
+性上,是因为他们知道如果没有一个方法来保证他们客户的数据的安全性，他们将没有任何
+机会去谈商务。
 
-In large part, this change is due to cloud companies themselves. CSPs put such a
-high priority on security because they know that without a way to secure their 
-client's data, they would have no business to speak of.
+因此，他们对最新的科技持续调研，研究网络攻击威胁，并投入响应的努力在保证他们系统
+的安全性上。你甚至听说过，Apple公司，他们有自己的iCloud，正在和美国政府斗法，
+为了避免在用户的系统上创建一个后门，因为这种行为无异于自杀。
 
-Hence they continued investigating in the latest technology to counter 
-cyber-threats and put relentless effort in securing their systems. You even have instances where companies like apple - which has its own iCloud-are fighting government efforts to create a back door into its own system,knowing such a thing amounts to business suicide.
+最终，关于在哪里存放他们的数据的问题越来越少，但是他们采取了什么措施来避免来自于
+安全犯罪行为的威胁。这里有一些重要的办法来提供你的公有云的安全性。
 
-Ultimately,it's because less of a question of where one keeps their data, but
-what measures they take to secure it from cyber criminals. To that end, here are
-some important ways to continually improve the security of your public cloud.
+1. 在你的ALAs中提高云安全的重要级别
 
-1. Prioritise Cloud Security in you SLAs
-
-Go over your SLA and make sure that the security guarantees are included and that
- they can be implemented. Remember that if it’s not clear on the contract, 
-it can’t be enforced.
-
-Typical items to look out for are:
+反复研读你的SLA，确认包含了安全承诺，记住如果在合同中不清楚，它就不能被执行
+看起来需要确认的几个典型条目包含：
 
  1. How will my data be protected? What are the encryption policies?
  2. What security standards does the CSP follow? What defenses do they have in 
