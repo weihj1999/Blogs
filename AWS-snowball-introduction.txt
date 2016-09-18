@@ -1,0 +1,40 @@
+
+
+What Is AWS Snowball?
+
+AWS Import/Export is a service that accelerates transferring large amounts of data into and out of AWS using physical 
+storage appliances, bypassing the Internet. AWS Import/Export has two features that support this functionality in two 
+different ways, AWS Snowball (Snowball) and AWS Import/Export Disk (Disk).
+
+With Snowball, you can transfer hundreds of terabytes or petabytes of data between your on-premises data centers and 
+Amazon Simple Storage Service (Amazon S3). AWS Snowball uses Snowball appliances and provides powerful interfaces that 
+you can use to create jobs, transfer data, and track the status of your jobs through to completion. By shipping your 
+data in Snowballs, you can transfer large amounts of data at a significantly faster rate than if you were transferring 
+that data over the Internet, saving you time and money.
+
+Note
+There are many options for transferring your data into AWS. Snowball is intended for transferring large amounts of data. 
+If you want to transfer less than 10 terabytes of data between your on-premises data centers and Amazon S3, Snowball might 
+not be your most economical choice.
+Snowball uses Snowball appliances shipped through your region's carrier. Each Snowball is protected by AWS Key Management 
+Service (AWS KMS) and made physically rugged to secure and protect your data while the Snowball is in transit. In the US 
+regions, Snowballs come in two sizes: 50 TB and 80 TB. All other regions have 80 TB Snowballs only.
+
+Snowball Features
+
+Snowball has the following features:
+
+1. You can import and export data between your on-premises data storage locations and Amazon S3.
+2. Snowball has an 80 TB model available in all regions, and a 50 TB model only available in the US regions.
+3. Encryption is enforced, protecting your data at rest and in physical transit.
+4. You don't have to buy or maintain your own hardware devices.
+5. You can manage your jobs through the AWS Snowball Management Console, or programmatically with the job management API.
+6. You can perform local data transfers between your on-premises data center and a Snowball can be done through the Snowball 
+client, a standalone downloadable client, or programmatically using Amazon S3 REST API calls with the downloadable Amazon 
+S3 API adapter for Snowball. For more information, see Transferring Data with a Snowball.
+7. The Snowball is its own shipping container, and its E Ink display changes to show your shipping label when the Snowball 
+is ready to ship. For more information, see Shipping Considerations for AWS Snowball.
+8. For a list of regions where Snowball is available, see AWS Snowball in the AWS General Reference.
+Note
+Snowball doesn't support international shipping or shipping between regions outside of the US. For more information on 
+shipping restrictions, see Region-Based Shipping Restrictions.
