@@ -1,0 +1,527 @@
+OpenStack Orchestration In Depth, Part II: Single Instance Deployments
+
+From： https://developer.rackspace.com/blog/openstack-orchestration-in-depth-part-2-single-instance-deployments/
+
+文章中的例子均可以在https://github.com/miguelgrinberg/heat-tutorial找到
+
+Deploying an Application on First Boot
+cloud-init是虚拟机实例初始化的事实上的标准了， 官方发布的很多云的映像都预装了它， 包括Ubuntu，
+Fedora等，虚拟机实例初始启动的时候运行Cloud-init， 它Nova的metadata服务api交互， 去检查是否需要
+执行相应的操作。
+
+和cloud-init服务交互的最简单的办法是，通过在启动的时候提供一个脚本。这个脚本通过root用户执行
+所以它可以访问实例，来安装和配置，下面的例子heat1b.yaml可以完成简单的测试：
+
+==========================
+heat_template_version: 2013-05-23
+
+description: Simple template to deploy a single compute instance
+
+parameters:
+  image:
+    type: string
+    label: Image name or ID
+    description: Image to be used for compute instance
+    default: cirros-0.3.3-x86_64
+  flavor:
+    type: string
+    label: Flavor
+    description: Type of instance (flavor) to be used
+    default: m1.small
+  key:
+    type: string
+    label: Key name
+    description: Name of key-pair to be used for compute instance
+    default: my_key
+  private_network:
+    type: string
+    label: Private network name or ID
+    description: Network to attach instance to.
+    default: private-net
+
+resources:
+  my_instance:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key }
+      networks:
+        - network: { get_param: private_network }
+      user_data: |
+        #!/bin/sh
+        echo "Hello, World!"
+      user_data_format: RAW
+
+outputs:
+  instance_name:
+    description: Name of the instance
+    value: { get_attr: [my_instance, name] }
+  instance_ip:
+    description: IP address of the instance
+    value: { get_attr: [my_instance, first_address] }
+==========================
+这里有几个变化：
+1. 在资源my_instance的user_data属性中包含了一个小的初始化脚本，打印一条欢迎信息
+2. user_data_format: RAW, 属性告诉HEAT，提供了user_data脚本给这个实例， 没有额外的内容了。 以后
+的教程会展示一些其他格式的user_data
+3. instance——name的输出设定为导出实例的名字
+可以通过执行
+$ heat stack-create stack_with_init_script -f heat_2a.yaml
+来创建一个stack
+同样的，如果比较懒，连下载这个脚本都不愿意的话，可以这么干：
+$ heat stack-create stack_with_init_script -u https://raw.githubusercontent.com/miguelgrinberg/heat-tutorial/master/heat_2a.yaml
+
+如果相应的资源在你的环境中没有，可以通过制定参数来操作
+$heat stack-create stack_with_init_script -f heat_2a.yaml -P "private_network=private;image=Trusty"
+
+下一步来验证user_data脚本得到了正确执行， 可以访问脚本的output，登陆进去实例，看
+控制台日志， 使用nova的命令行工具，火灾在dashboard上操作，查看console log，需要知道实例的
+名字， 这样查看
+$ heat stack-show stack_with_init_script
++----------------------+------------------------------------------------------------------------+
+| Property             | Value                                                                  |
++----------------------+------------------------------------------------------------------------+
+| ...                  |                                                                        |
+| ...                  |                                                                        |
+| outputs              | [                                                                      |
+|                      |   {                                                                    |
+|                      |     "output_value": "stack_with_init_script-my_instance-t5elvfeqdz63", |
+|                      |     "description": "Name of the instance",                             |
+|                      |     "output_key": "instance_name"                                      |
+|                      |   },                                                                   |
+|                      |   {                                                                    |
+|                      |     "output_value": "10.10.10.75",                                     |
+|                      |     "description": "IP address of the instance",                       |
+|                      |     "output_key": "instance_ip"                                        |
+|                      |   }                                                                    |
+|                      | ]                                                                      |
+| ...                  |                                                                        |
+| ...                  |                                                                        |
++----------------------+------------------------------------------------------------------------+
+
+紧接着就可以查看console log了
+
+$ nova console-log stack_with_init_script-my_instance-t5elvfeqdz63 | less
+
+滚动到结尾处就可以看到"Hello, World!"被打印出来了
+测试结束就可以删除stack了
+$ heat stack-delete stack_with_init_script
+
+A Real Deployment
+上面的例子虽然有趣，但并不实用。 但是我们可以使用这一技巧来做一次真实的部署，通过让user_data脚本
+执行需要的安装操作：
+下面的例子就会部署一个Python写的网站应用， 使用Flash微框架。这是一个小型博客网站。 这个应用
+通过一个数据库，发送邮件提醒， 实现一个api， 拥有一个典型的web界面， 所以是一个很理想的测试例子。
+
+下面是一个完整的部署模板值得仔细分析
+===========================
+heat_template_version: 2013-05-23
+
+description: This template deploys a Flasky single instance server with a SQLite database.
+
+parameters:
+  image:
+    type: string
+    label: Image name or ID
+    description: Image to be used for the server. Please use an Ubuntu based image.
+    default: trusty-server-cloudimg-amd64
+  flavor:
+    type: string
+    label: Flavor
+    description: Type of instance (flavor) to be used on the compute instance.
+    default: m1.small
+  key:
+    type: string
+    label: Key name
+    description: Name of key-pair to be installed on the compute instance.
+    default: my_key
+  private_network:
+    type: string
+    label: Private network name or ID
+    description: Private network to attach server to.
+    default: private-net
+  gmail_username:
+    type: string
+    label: Gmail account username
+    description: Username of the Gmail account to use for notifications.
+  gmail_password:
+    type: string
+    label: Gmail account password
+    description: Password of the Gmail account to use for notifications.
+    hidden: true
+
+resources:
+  flask_secret_key:
+    type: OS::Heat::RandomString
+    properties:
+      length: 32
+      sequence: lettersdigits
+
+  flasky_instance:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key }
+      networks:
+        - network: { get_param: private_network }
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          params:
+            __gmail_username__: { get_param: gmail_username }
+            __gmail_password__: { get_param: gmail_password }
+            __flask_secret_key__: { get_attr: [flask_secret_key, value] }
+          template: |
+            #!/bin/bash -ex
+
+            # install dependencies
+            apt-get update
+            apt-get -y install build-essential python python-dev python-virtualenv nginx supervisor git
+
+            # create a flasky user to run the server process
+            adduser --disabled-password --gecos "" flasky
+
+            # clone flasky from github
+            cd /home/flasky
+            git clone https://github.com/miguelgrinberg/flasky.git
+            cd flasky
+
+            # Write configuration file
+            cat >.env <<EOF
+            FLASK_CONFIG=heroku
+            SECRET_KEY=__flask_secret_key__
+            DATABASE_URL=sqlite:////home/flasky/flasky/appdb.sqlite
+            MAIL_USERNAME=__gmail_username__
+            MAIL_PASSWORD=__gmail_password__
+            FLASKY_ADMIN=__gmail_username__@gmail.com
+            SSL_DISABLE=1
+            EOF
+
+            # create a virtualenv and install dependencies
+            virtualenv venv
+            venv/bin/pip install -r requirements/prod.txt
+            venv/bin/pip install gunicorn==18.0
+
+            # create database
+            venv/bin/python manage.py deploy
+
+            # make the flasky user the owner of the application
+            chown -R flasky:flasky ./
+
+            # configure supervisor to run a private gunicorn web server, and
+            # to autostart it on boot and when it crashes
+            # stdout and stderr logs from the server will go to /var/log/flasky
+            mkdir /var/log/flasky
+            cat >/etc/supervisor/conf.d/flasky.conf <<EOF
+            [program:flasky]
+            command=/home/flasky/flasky/venv/bin/gunicorn -b 127.0.0.1:8000 -w 4 --chdir /home/flasky/flasky --log-file - manage:app
+            user=flasky
+            autostart=true
+            autorestart=true
+            stderr_logfile=/var/log/flasky/stderr.log
+            stdout_logfile=/var/log/flasky/stdout.log
+            EOF
+            supervisorctl reread
+            supervisorctl update
+
+            # configure nginx as the front-end web server with a reverse proxy
+            # rule to the gunicorn server
+            cat >/etc/nginx/sites-available/flasky <<EOF
+            server {
+                listen 80;
+                server_name _;
+                access_log /var/log/nginx/flasky.access.log;
+                error_log /var/log/nginx/flasky.error.log;
+                location / {
+                    proxy_pass http://127.0.0.1:8000;
+                    proxy_redirect off;
+                    proxy_set_header Host \$host;
+                    proxy_set_header X-Real-IP \$remote_addr;
+                    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                }
+                location /static {
+                    alias /home/flasky/flasky/static;
+                }
+                location /favicon.ico {
+                    alias /home/flasky/flasky/favicon.ico;
+                }
+            }
+            EOF
+            rm -f /etc/nginx/sites-enabled/default
+            ln -s /etc/nginx/sites-available/flasky /etc/nginx/sites-enabled/
+            service nginx restart
+
+outputs:
+  instance_name:
+    description: Name of the instance
+    value: { get_attr: [flasky_instance, name] }
+  instance_ip:
+    description: The IP address of the deployed instance
+    value: { get_attr: [flasky_instance, first_address] }
+===========================
+这个模板可以从https://raw.githubusercontent.com/miguelgrinberg/heat-tutorial/master/heat_2b.yaml
+下载。
+执行相应的操作。
+$ heat stack-create flasky -f heat_2b.yaml -P "gmail_username=<your-gmail-user>;gmail_password=<your-gmail-pw>"
+来创建。 
+同样的如果要使用不同的秘钥，影响。 就可以在-P属性里面添加， 
+
+来做一个简单的分析吧。 首先多了两个新的参数， gmail账号， Flasky应用刚发送邮件给用户来通知他们一些
+特定的时间， 最简单的方法就是使用邮件来发送， 利用第三方的邮件服务， Gmail是一个很好的
+选择，至少测试很好用。
+
+小提示： hidden： true属性用在gmail_password 
+
+user_data中使用的安装脚本构成了这个模板的很大篇幅。 但是结构很简单。 
+使用str_replace来实现脚本的换行，可以很方便的执行变量替换的动作， 这个脚本中有三个变量需要替换。
+其中两个就是gmail的用户名和密码， 这个要写进配置文件中， 第三个是Flask应用的安全秘钥，来执行加密
+操作。 注意到安全秘钥的值是一个资源的引用，是在server资源中进行定义的， 这个资源的类型是：
+OS::Heat::RandomString, 从名字上可以判定，他是随机生成的一个字符串。
+
+这个脚本使用bash来写的， 假设实例基于Ubuntu的映像， --ex 会让所有指令会被console log记载。 如果
+任何一个命令返回错误， 脚本就会立刻放弃执行。 这个在诊断错误的时候非常有用。 
+
+这里做一个总结：
+1. 首先，大量的依赖包需要安装，这里包括C++编译器，Python SDK（用于变异内置的Python扩充）， 
+virtualenv工具， git， nginx网站服务器， 以及supervisor监控守护进程
+2. 创建一个flasky用户， 这个用户来运行Python 网站应用， 这个用户没有密码， 也就不能被用外部登入，
+提供了一定的安全性。
+3. git命令用于克隆Flasky应用， 从我的Github上直接拉过来就额可以使用。 
+4. Flasky使用一个配置文件，保存在.env文件中， 
+下一步是构建一个虚拟环境， 然后在里面安装一些必要的包。 Gunicorn网站同时也安装了
+5. manage.py deploy命令，一个定制的命令， 创建了数据库，并作了所有的迁移，生成一些必要的初始变量。
+6. 因为脚本是通过root用户裕兴的，所有通过应用创建的文件都要把所有权修改为flasky用户
+7. 应用运行在本地实例上，所以监听的是127.0.0.1:8080， 不直接运行Gunicorn， 脚本创建了一个超级
+管理配置文件， 进程能够时刻监控并且在进程死掉之后重新启动它， 或者实例重启以后。 超级配置也会
+设置日志文件记录stdout， stderr， 这样方便诊断和调试。
+8. 最后，添加为nginx添加一个配置文件。
+
+Networking Improvements
+上面的额网站部署了一个Flsky网站，但是并不能被外面的internet访问， 我们来对网络进行增强操作，
+比如，关联外网IP，设置安全组等等
+
+配置一个安全组
+在之前的脚本中加入下面的部分， 同样的内容以。。。忽略
+==================================
+resources:
+  ...
+
+  web_server_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: web_server_security_group
+      rules:
+        - protocol: tcp
+          port_range_min: 80
+          port_range_max: 80
+        - protocol: tcp
+          port_range_min: 443
+          port_range_max: 443
+        - protocol: icmp
+        - protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+
+  flasky_instance:
+    type: OS::Nova::Server
+    properties:
+      ...
+      security_groups:
+        - { get_resource: web_server_security_group }
+==================================		
+OS::Neutron::SecurityGroup定义了开放哪些端口， 这里选择开放80和443 。 
+nginx并没有配置运行https， 留给大家练习
+
+Creating a Private Network
+
+当前的方法需要一个已经存在的私有网络来关联给实例， 很不方便， 因为没有办法让heat确保网络
+正确配置了， 并且正确的被路由到外网。 
+下面的要介绍的方法更加灵活， 不再使用一个已经存在的网络， 脚本也会去请求一个可以使用的浮动
+IP地址来连接外网。 
+脚本创建自己的私网，和一个路由器来连接到外面。 
+
+下面展示了变化的地方， private_network需要有新的叫做public_network的替换掉， 一下新的
+resource也被引入了， 比如说创建网络，子网以及router
+=================================
+parameters:
+  ...
+  public_network:
+    type: string
+    label: Public network name or ID
+    description: Public network with floating IP addresses.
+    default: public-net
+  ...
+
+resources:
+  ...
+
+  private_network:
+    type: OS::Neutron::Net
+
+  private_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network_id: { get_resource: private_network }
+      cidr: 10.10.10.0/24
+      dns_nameservers:
+        - 8.8.8.8
+
+  router:
+    type: OS::Neutron::Router
+    properties:
+      external_gateway_info:
+        network: { get_param: public_network }
+
+  router-interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: { get_resource: router }
+      subnet: { get_resource: private_subnet }
+=================================
+首先是三个资源的声明很容易理解，他们会创建新的网络，子网和路由器， 由于新的网络会被路由到
+外网， 添加了一个DNS地址用来做名字解析， 
+
+对于路由器， public_network 参数被定义为网关
+
+第四个资源， router-interface， 用来关联一个私网到router， 
+
+Attaching a Floating IP Address
+最后一个关键步骤就是让模板去选择一个浮动IP给服务器
+=================================
+resources:
+  ...
+
+  flasky_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_resource: private_network }
+      security_groups:
+        - { get_resource: web_server_security_group }
+
+  flasky_instance:
+    type: OS::Nova::Server
+    properties:
+      ...
+      networks:
+        - port: { get_resource: flasky_port }
+
+  floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: public_network }
+
+  floating_ip_assoc:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: floating_ip }
+      port_id: { get_resource: flasky_port }
+
+outputs:
+  ...
+  instance_ip:
+    description: The IP address of the deployed instance
+    value: { get_attr: [floating_ip, floating_ip_address] }
+=================================
+Putting It All Together
+
+组合所有的在一起就完成了新的模板， 
+也可以从：
+https://raw.githubusercontent.com/miguelgrinberg/heat-tutorial/master/heat_2c.yaml
+下载。
+
+Signaling　发信号
+
+上面的例子的最大问题就是， HEAT很快切换到STACK_COMPLETE状态，而不会等待安装脚本完成。 这是
+因为heat没有办法知道脚本要做的事情， 他能做的最好的事情就是把脚本传递到实例里面，并假设他
+们很快就能完成。
+这是有问题的， 因为没有办法知道部署到底什么时候能完成， 我们能做的就是不断尝试，知道工作正常。 
+
+幸运的是，有很多办法来让一个实例发送一些信号给HEAT API，来提示安装进程， 这里来展示一个简单
+的例子， 基于一个叫做waitcondition的资源，来看一下：
+====================================================
+resources:
+  ...
+
+  wait_condition:
+    type: OS::Heat::WaitCondition
+    properties:
+      handle: { get_resource: wait_handle }
+      count: 1
+      timeout: 600
+
+  wait_handle:
+    type: OS::Heat::WaitConditionHandle
+
+  flasky_instance:
+    type: OS::Nova::Server
+    properties:
+      ...
+      user_data:
+        str_replace:
+          params:
+            ...
+            wc_notify: { get_attr: ['wait_handle', 'curl_cli'] }
+          template: |
+            #!/bin/bash -ex
+            ...
+            wc_notify --data-binary '{"status": "SUCCESS"}'
+====================================================
+
+OS::Heat::WaitCondition资源实例化一个特定的资源，能够通过一个handler从实例中打信号。 这个资源
+在他收到一定数量（account参数指定的）信号后就会改变自身章台。 timeout属性指定了一个时间，在这
+各时间内它会等待那些信号。 如果在给定的时间内收到失败的信号，就会把waitcondition设置为一个失败
+的状态， 同样的整个stack的创建就会失败。 
+
+有很多种机制来从实例中触发信号， 目前为止，最简单的方法就是使用curl来发送一个请求。 为了更简单
+依次按， wait handler资源提供了curl_cli属性， 定了一个这个命令来发送信号， 包含了认证的token
+我添加了curl_cli属性作为额外的替换变量， 我在脚本的最后调用它， 使用的是JSON格式。 
+
+简单吧， 最终版本的脚本可以从这个链接拿到
+https://raw.githubusercontent.com/miguelgrinberg/heat-tutorial/master/heat_2d.yaml
+
+关于waitcondition补充一些语法要求
+OS::Heat::WaitCondition
+语法：
+heat_template_version: 2015-04-30
+...
+resources:
+  ...
+  the_resource:
+    type: OS::Heat::WaitCondition
+    properties:
+      count: Integer
+      handle: String
+      timeout: Number
+
+说明：
+handle：　一个引用，　用来发信号
+timeout：秒，　等待正确的符号的数量到达，　１~43200, 最大12个小时
+count：成功的信号的数量， 必须在stack创建的过程中受到这个属两个的信号，最小是1
+
+OS::Heat::WaitConditionHandle
+管理实例信号的资源
+要求： 
+1. 不能有依赖
+2. 创建证书，允许从实例里面发送信号
+3. 处理从实例发出的信号， 验证，并储存结果
+
+heat_template_version: 2015-04-30
+...
+resources:
+  ...
+  the_resource:
+    type: OS::Heat::WaitConditionHandle
+    properties:
+      signal_transport: String
+
+signal_transport：默认是TOKEN_SIGNAL ，　允许HTTP POST, 到一个heat API endpoint
+使用提供的keystone的 token，
+curl_cli： 通常使用culr CLI最简单， 通常需要配置signal_transport 为TOKEN_SIGNAL， 
+可以通过添加–data-binary ‘{“status”: “SUCCESS”}’  来打成功的信号， 也可以，
+通过添加： –data-binary ‘{“status”: “FAILURE”}’　来打失败信号，　
+如果使用其他的signal transports，　则这个属性设置为None
+
+endpoint:
+使用Endpoint/url， 如果signal_transport是TOKEN_SIGNAL.
