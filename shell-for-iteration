@@ -1,0 +1,9 @@
+for sname in {"keystoneclient","novaclient","swiftclient","ceilometerclient","heatclient","cinderclient","neutronclient","glanceclient","openstackclient"}
+do
+  yum remove python-$sname -y
+done
+
+for sname in {"keystoneclient","novaclient","swiftclient","ceilometerclient","heatclient","cinderclient","neutronclient","glanceclient","openstackclient"}
+do
+  yum install python-$sname -y
+done
