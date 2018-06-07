@@ -1,0 +1,38 @@
+使用OpenSSL生成私钥(Private Key)以及根据Private Key创建证书
+
+公钥和私钥通常是成对出现的，有了公钥那就存在对应的私钥，通常OpenSSL，公钥是很容易从私钥中得到的，因而我们要创建证书，那我们首先要做的就是创建私钥。
+
+
+1、使用OpenSSL生成私钥
+常用的生成算法有RSA及DSA，RSA生成的私钥可以用来加密以及签名，而DSA生成的私钥只可以用来签名
+1.1）、RSA算法生成key的示例
+ openssl genrsa -des3 -out privkey.pem 2048
+ 
+genrsa：指定了生成了算法使用RSA
+-desc：表示生成的key是有密码保护的（注：如果是将生成的key与server的证书一起使用，最好不需要密码，就是不要这个参数，否则其它人就会在请求的时候每次都要求输入密码）
+-out：后面的参数表示生成的key的输入文件
+2048：表示的是生成key的大小，单为字节(bits)
+1.2）、DSA算法生成key的示例
+根据DSA算法生成Key需要两步：
+1.2.1）、第一步是生成用于生成Key的参数：
+ openssl dsaparam -out dsaparam.pem 2048
+1.2.2）、根据生成的参数生成Key：
+openssl gendsa -des3 -out privkey.pem dsaparam.pem
+
+详细参见：http://www.openssl.org/docs/HOWTO/keys.txt
+
+
+2、使用OpenSSL创建证书申请及自签名证书
+在第1步中，我们已经创建好了私钥，这个时候我们就可以使用创建好的private.pem来创建证书申请及自签名证书。
+
+
+2.1) 创建证书申请
+openssl req -new -key privkey.pem -out cert.csr
+使用上面的命令就会创建一个证书申请，这里我们会要求输入国家、组织、姓名等信息，但是不会要求输入证书有效天数，因为证书有效天数是CA认证中心给我们的；然后我们会把这个生成好的cert.csr（Certificate Signing Request (CSR)：证书签名申请）发给CA认证中心。
+CA认证中心通过后，会反馈（通常是邮件）回来认证的信息，再导入即可。
+关于导出CSR以及导入CA认证信息，可以参看文档：http://docs.oracle.com/javase/1.4.2/docs/tooldocs/windows/keytool.html
+
+
+2.2) 创建自签名的证书
+openssl req -new -x509 -key privkey.pem -out cacert.pem -days 1095
+如果不需要第三方授权，或者是要创建一个用于测试的授权，我们就可以这样操作。后面的参数"-days 1095"表示授权天数为1095天。
