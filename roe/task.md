@@ -71,16 +71,16 @@
     <tr>
         <th   bgcolor="MEDIUMAQUAMARINE">10:05</th>
         <th   bgcolor="MEDIUMAQUAMARINE">11:00</th>
-        <th   bgcolor="MEDIUMAQUAMARINE">训练士兵</th>
-        <th   bgcolor="MEDIUMAQUAMARINE">参考士兵训练表</th>
+        <th   bgcolor="MEDIUMAQUAMARINE">1点研究战斗力</th>
+        <th   bgcolor="MEDIUMAQUAMARINE">400</th>
         <th   bgcolor="MEDIUMAQUAMARINE"></th>
         <th   bgcolor="MEDIUMAQUAMARINE"></th>
     </tr>
     <tr>
         <th   bgcolor="MEDIUMAQUAMARINE">18:05</th>
         <th   bgcolor="MEDIUMAQUAMARINE">19:00</th>
-        <th   bgcolor="MEDIUMAQUAMARINE">一分钟训练加速</th>
-        <th   bgcolor="MEDIUMAQUAMARINE"></th>
+        <th   bgcolor="MEDIUMAQUAMARINE">士兵训练</th>
+        <th   bgcolor="MEDIUMAQUAMARINE">参考士兵训练表</th>
         <th   bgcolor="MEDIUMAQUAMARINE"></th>
         <th   bgcolor="MEDIUMAQUAMARINE"></th>
     </tr>
