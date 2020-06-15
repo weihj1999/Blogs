@@ -88,7 +88,7 @@
         <th rowspan="3"   bgcolor="BLANCHEDALMOND">第四任务</th>
         <th   bgcolor="BLANCHEDALMOND">03:05</th>
         <th   bgcolor="BLANCHEDALMOND">04:00</th>
-        <th   bgcolor="BLANCHEDALMOND">1点研究战斗力</th>
+        <th   bgcolor="BLANCHEDALMOND">1点建筑战斗力</th>
         <th   bgcolor="BLANCHEDALMOND">400</th>
         <th   bgcolor="BLANCHEDALMOND">50K</th>
         <th   bgcolor="BLANCHEDALMOND">400K</th>
@@ -96,8 +96,8 @@
     <tr>
         <th   bgcolor="BLANCHEDALMOND">11:05</th>
         <th   bgcolor="BLANCHEDALMOND">12:00</th>
-        <th   bgcolor="BLANCHEDALMOND">训练士兵</th>
-        <th   bgcolor="BLANCHEDALMOND">参考士兵训练表</th>
+        <th   bgcolor="BLANCHEDALMOND">制造装备</th>
+        <th   bgcolor="BLANCHEDALMOND"></th>
         <th   bgcolor="BLANCHEDALMOND"></th>
         <th   bgcolor="BLANCHEDALMOND"></th>
     </tr>
