@@ -1,5 +1,3 @@
-灰色表示确认，但是该事件是按照德国事件算，并不是游戏真正的刷新事件，后面会采用游戏刷新时间进行修正
-
 <table><tbody>
     <tr>
         <th rowspan="2" bgcolor="lightgray">第一任务</th>
@@ -233,7 +231,7 @@
         <th bgcolor="LightGoldenRodYellow">建筑，研究，装备</center></th>
     </tr>
     <tr>
-        <th rowspan="2"   bgcolor="lightgray">第一任务</th>
+        <th rowspan="2"   bgcolor="lightgray">第二三任务</th>
         <th   bgcolor="LightGoldenRodYellow">开始时间</th>
         <th   bgcolor="LightGoldenRodYellow">结束时间</th>
         <th   bgcolor="LightGoldenRodYellow">任务要求</th>
@@ -255,7 +253,7 @@
         <th bgcolor="LightGoldenRodYellow">建筑，研究，装备</center></th>
     </tr>
     <tr>
-        <th rowspan="2"   bgcolor="lightgray">第一任务</th>
+        <th rowspan="2"   bgcolor="lightgray">第二四任务</th>
         <th   bgcolor="LightGoldenRodYellow">开始时间</th>
         <th   bgcolor="LightGoldenRodYellow">结束时间</th>
         <th   bgcolor="LightGoldenRodYellow">任务要求</th>
