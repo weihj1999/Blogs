@@ -92,7 +92,7 @@
         <th bgcolor="lightgray">第十五任务</th>
         <th   bgcolor="LightGoldenRodYellow">18:05</th>
         <th   bgcolor="LightGoldenRodYellow">19:00</th>
-        <th bgcolor="LightGoldenRodYellow">一点建筑战斗力，1点研究战斗力，训练士兵1分钟加速</center></th>
+        <th bgcolor="LightGoldenRodYellow">1点建筑战斗力，1点研究战斗力，士兵训练1分钟加速</center></th>
     </tr>
     <tr>
         <th bgcolor="lightgray">第十六任务</th>
