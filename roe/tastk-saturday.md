@@ -134,7 +134,7 @@
         <th bgcolor="lightgray">第二二任务</th>
         <th bgcolor="LightGoldenRodYellow">01:05</th>
         <th   bgcolor="LightGoldenRodYellow">02:00</th>
-        <th bgcolor="LightGoldenRodYellow">1点研究战斗力，士兵训练</center></th>
+        <th bgcolor="LightGoldenRodYellow">1点建筑战斗力，训练士兵1分钟道具，士兵训练</center></th>
     </tr>
     <tr>
         <th bgcolor="lightgray">第二三任务</th>
