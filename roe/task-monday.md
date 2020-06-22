@@ -26,13 +26,13 @@
         <th bgcolor="lightgray">第四任务</th>
         <th bgcolor="LightGoldenRodYellow">07:05</th>
         <th bgcolor="LightGoldenRodYellow">08:00</th>
-        <th bgcolor="LightGoldenRodYellow">建筑， 练兵</th>
+        <th bgcolor="LightGoldenRodYellow">1点建筑战斗力， 士兵训练</th>
     </tr>
     <tr>
         <th bgcolor="lightgray">第五任务</th>
         <th   bgcolor="LightGoldenRodYellow">08:05</th>
         <th   bgcolor="LightGoldenRodYellow">09:00</th>
-        <th bgcolor="LightGoldenRodYellow">建筑，装备</center></th>
+        <th bgcolor="LightGoldenRodYellow">1点建筑战斗力，装备</center></th>
     </tr>
     <tr>
         <th bgcolor="lightgray">第六任务</th>
