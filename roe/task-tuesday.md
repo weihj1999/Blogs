@@ -132,15 +132,10 @@
         <th bgcolor="LightGoldenRodYellow">建筑，研究，装备</center></th>
     </tr>
     <tr>
-        <th rowspan="2"   bgcolor="LightGoldenRodYellow">第一任务</th>
-        <th   bgcolor="LightGoldenRodYellow">开始时间</th>
-        <th   bgcolor="LightGoldenRodYellow">结束时间</th>
-        <th   bgcolor="LightGoldenRodYellow">任务要求</th>
-    </tr>
-    <tr>
+        <th bgcolor="LightGoldenRodYellow">第一任务</th>
         <th   bgcolor="LightGoldenRodYellow">12:05</th>
         <th   bgcolor="LightGoldenRodYellow">13:00</th>
-        <th bgcolor="LightGoldenRodYellow">建筑，研究，装备</center></th>
+        <th bgcolor="LightGoldenRodYellow">1点建筑战斗力，装备</center></th>
     </tr>
     <tr>
         <th rowspan="2"   bgcolor="LightGoldenRodYellow">第一任务</th>
