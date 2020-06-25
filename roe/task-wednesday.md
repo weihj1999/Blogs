@@ -80,13 +80,13 @@
         <th bgcolor="lightgray">第十三任务</th>
         <th   bgcolor="LightGoldenRodYellow">16:05</th>
         <th   bgcolor="LightGoldenRodYellow">17:00</th>
-        <th  bgcolor="LightGoldenRodYellow">1点建筑战斗力，士兵训练</center></th>
+        <th  bgcolor="LightGoldenRodYellow">1点建筑战斗力，1点研究战斗力，士兵训练1分钟加速</center></th>
     </tr>
     <tr>
         <th bgcolor="lightgray">第十四任务</th>
         <th bgcolor="LightGoldenRodYellow">17:05</th>
         <th bgcolor="LightGoldenRodYellow">18:00</th>
-        <th bgcolor="LightGoldenRodYellow">1分钟训练加速，1分钟科研加速，1分钟建筑加速</center></th>
+        <th bgcolor="LightGoldenRodYellow">1点建筑战斗力，士兵训练</center></th>
     </tr>
     <tr>
         <th bgcolor="lightgray">第十五任务</th>
@@ -122,25 +122,25 @@
         <th bgcolor="lightgray">第二十任务</th>
         <th bgcolor="LightGoldenRodYellow">23:05</th>
         <th   bgcolor="LightGoldenRodYellow">00:00</th>
-        <th bgcolor="LightGoldenRodYellow">训练士兵1分钟道具</center></th>
+        <th bgcolor="LightGoldenRodYellow">1点建筑战斗力</center></th>
     </tr>
     <tr>
         <th bgcolor="lightgray">第二一任务</th>
         <th bgcolor="LightGoldenRodYellow">00:05</th>
         <th   bgcolor="LightGoldenRodYellow">01:00</th>
-        <th bgcolor="LightGoldenRodYellow">1点建筑战斗力，1点研究战斗力，训练士兵1分钟道具</center></th>
+        <th bgcolor="LightGoldenRodYellow">1点建筑战斗力, 训练士兵</center></th>
     </tr>
     <tr>
         <th bgcolor="lightgray">第二二任务</th>
         <th bgcolor="LightGoldenRodYellow">01:05</th>
         <th   bgcolor="LightGoldenRodYellow">02:00</th>
-        <th bgcolor="LightGoldenRodYellow">1点研究战斗力，士兵训练</center></th>
+        <th bgcolor="LightGoldenRodYellow">建筑战斗力1分钟加速，研究战斗力1分钟加速，士兵训练1分钟加速</center></th>
     </tr>
     <tr>
         <th bgcolor="lightgray">第二三任务</th>
         <th bgcolor="LightGoldenRodYellow">02:05</th>
         <th   bgcolor="LightGoldenRodYellow">03:00</th>
-        <th bgcolor="LightGoldenRodYellow">1点研究战斗力，士兵训练</center></th>
+        <th bgcolor="LightGoldenRodYellow">1点建筑战斗力，1点研究战斗力，1分钟士兵训练加速</center></th>
     </tr>
     <tr>
         <th bgcolor="lightgray">第二四任务</th>
