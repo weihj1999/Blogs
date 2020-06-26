@@ -98,7 +98,7 @@
         <th bgcolor="lightgray">第十六任务</th>
         <th   bgcolor="LightGoldenRodYellow">19:05</th>
         <th   bgcolor="LightGoldenRodYellow">20:00</th>
-        <th bgcolor="LightGoldenRodYellow"></center></th>
+        <th bgcolor="LightGoldenRodYellow">1分钟任意加速</center></th>
     </tr>
     <tr>
         <th bgcolor="lightgray">第十七任务</th>
